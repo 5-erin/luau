@@ -133,7 +133,7 @@ void resolveGenericSubstitutions(
         {
             auto r = subtyping->isSubtype(ty, *gen->constraint, scope);
             if (!r.isSubtype)
-                genericSubstitutions.erase(genTy);
+                genericSubstitutions[genTy] = *gen->constraint;
         }
     }
 
