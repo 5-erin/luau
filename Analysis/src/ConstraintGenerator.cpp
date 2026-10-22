@@ -52,6 +52,7 @@ LUAU_FASTFLAGVARIABLE(LuauExperimentalIfLocalAnalysis)
 LUAU_FLAGVERSION(LuauExperimentalIfLocalAnalysis, 2)
 LUAU_FASTFLAG(LuauTraverseScopeToFunction)
 LUAU_FASTFLAGVARIABLE(LuauUnconditionallyVisitTypeAliasParams)
+LUAU_FASTFLAGVARIABLE(LuauGenericConstraintsSupport)
 
 namespace Luau
 {
@@ -5217,6 +5218,10 @@ std::vector<std::pair<Name, GenericTypeDefinition>> ConstraintGenerator::createG
     std::vector<std::pair<Name, GenericTypeDefinition>> result;
     for (const auto* generic : generics)
     {
+        std::optional<TypeId> constraintTy = std::nullopt;
+        if (generic->constraint)
+            constraintTy = resolveType(scope, generic->constraint, false);
+
         TypeId genericTy = nullptr;
 
         if (auto it = scope->parent->typeAliasTypeParameters.find(generic->name.value);
@@ -5224,7 +5229,7 @@ std::vector<std::pair<Name, GenericTypeDefinition>> ConstraintGenerator::createG
             genericTy = it->second;
         else
         {
-            genericTy = arena->addType(GenericType{scope.get(), generic->name.value, Polarity::None});
+            genericTy = arena->addType(GenericType{scope.get(), generic->name.value, constraintTy, Polarity::None});
             scope->parent->typeAliasTypeParameters[generic->name.value] = genericTy;
         }
 

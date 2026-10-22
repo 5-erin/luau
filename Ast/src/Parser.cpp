@@ -34,6 +34,7 @@ LUAU_FASTFLAGVARIABLE(LuauSingleTypeOptionalPackReturnsAttributeParens)
 LUAU_FASTFLAGVARIABLE(DebugLuauParseExactTables)
 LUAU_FASTFLAGVARIABLE(LuauExperimentalIfLocalSyntax)
 LUAU_FLAGVERSION(LuauExperimentalIfLocalSyntax, 2)
+LUAU_FASTFLAGVARIABLE(LuauGenericConstraintsSyntax)
 
 // Clip with DebugLuauReportReturnTypeVariadicWithTypeSuffix
 bool luau_telemetry_parsed_return_type_variadic_with_type_suffix = false;
@@ -1478,9 +1479,9 @@ AstStat* Parser::parseTypeAlias(const Location& start, bool exported, Position t
     Position genericsClosePosition = Position::missing();
     auto [generics, genericPacks] = options.storeCstData
                                         ? parseGenericTypeList(
-                                              /* withDefaultValues= */ true, &genericsOpenPosition, &genericsCommaPositions, &genericsClosePosition
+                                              /* withDefaultValues= */ true, /* withGenericConstraints */ false, &genericsOpenPosition, &genericsCommaPositions, &genericsClosePosition
                                           )
-                                        : parseGenericTypeList(/* withDefaultValues= */ true);
+                                        : parseGenericTypeList(/* withDefaultValues= */ true, /* withGenericConstraints */ false);
 
     bool equalsFound = expectAndConsume('=', "type alias");
     Position equalsPosition = equalsFound ? lexer.previousLocation().begin : Position::missing();
@@ -1824,7 +1825,7 @@ AstStat* Parser::parseDeclaration(const Location& start, const AstArray<AstAttr*
         nextLexeme();
 
         Name globalName = parseName("global function name");
-        auto [generics, genericPacks] = parseGenericTypeList(/* withDefaultValues= */ false);
+        auto [generics, genericPacks] = parseGenericTypeList(/* withDefaultValues= */ false, /* withGenericConstraints */ true);
 
         MatchLexeme matchParen = lexer.current();
 
@@ -2281,9 +2282,9 @@ std::pair<AstExprFunction*, AstLocal*> Parser::parseFunctionBody(
     auto [generics, genericPacks] =
         cstNode
             ? parseGenericTypeList(
-                  /* withDefaultValues= */ false, &cstNode->openGenericsPosition, &cstNode->genericsCommaPositions, &cstNode->closeGenericsPosition
+                  /* withDefaultValues= */ false, /* withGenericConstraints */ true, &cstNode->openGenericsPosition, &cstNode->genericsCommaPositions, &cstNode->closeGenericsPosition
               )
-            : parseGenericTypeList(/* withDefaultValues= */ false);
+            : parseGenericTypeList(/* withDefaultValues= */ false, /* withGenericConstraints */ true);
 
     MatchLexeme matchParen = lexer.current();
     expectAndConsume('(', "function");
@@ -2990,9 +2991,9 @@ AstTypeOrPack Parser::parseFunctionType(bool allowPack, const AstArray<AstAttr*>
     Position genericsClosePosition = Position::missing();
     auto [generics, genericPacks] = options.storeCstData
                                         ? parseGenericTypeList(
-                                              /* withDefaultValues= */ false, &genericsOpenPosition, &genericsCommaPositions, &genericsClosePosition
+                                              /* withDefaultValues= */ false, /* withGenericConstraints */ true, &genericsOpenPosition, &genericsCommaPositions, &genericsClosePosition
                                           )
-                                        : parseGenericTypeList(/* withDefaultValues= */ false);
+                                        : parseGenericTypeList(/* withDefaultValues= */ false, /* withGenericConstraints */ true);
 
     Lexeme parameterStart = lexer.current();
 
@@ -4577,6 +4578,7 @@ Parser::Name Parser::parseIndexName(const char* context, const Position& previou
 
 std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::parseGenericTypeList(
     bool withDefaultValues,
+    bool withGenericConstraints,
     Position* openPosition,
     AstArray<Position>* commaPositions,
     Position* closePosition
@@ -4654,6 +4656,16 @@ std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::pars
             }
             else
             {
+                Position constraintColonPosition = Position::missing();
+                AstType* constraint = nullptr;
+
+                if (FFlag::LuauGenericConstraintsSyntax && withGenericConstraints && lexer.current().type == ':')
+                {
+                    constraintColonPosition = lexer.current().location.begin;
+                    nextLexeme();
+                    constraint = parseType();
+                }
+
                 if (withDefaultValues && lexer.current().type == '=')
                 {
                     seenDefault = true;
@@ -4662,9 +4674,9 @@ std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::pars
 
                     AstType* defaultType = parseType();
 
-                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, defaultType);
+                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, constraint, defaultType);
                     if (options.storeCstData)
-                        cstNodeMap[node] = allocator.alloc<CstGenericType>(equalsPosition);
+                        cstNodeMap[node] = allocator.alloc<CstGenericType>(constraintColonPosition, equalsPosition);
                     names.push_back(node);
                 }
                 else
@@ -4672,9 +4684,9 @@ std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::pars
                     if (seenDefault)
                         report(lexer.current().location, "Expected default type after type name");
 
-                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, nullptr);
+                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, constraint, nullptr);
                     if (options.storeCstData)
-                        cstNodeMap[node] = allocator.alloc<CstGenericType>(Position::missing());
+                        cstNodeMap[node] = allocator.alloc<CstGenericType>(constraintColonPosition, Position::missing());
                     names.push_back(node);
                 }
             }

@@ -29,7 +29,7 @@ LUAU_FASTFLAG(LuauRefactorStringSemanticSubtyping)
 LUAU_FASTFLAG(DebugLuauExactTableTypes)
 LUAU_FASTFLAGVARIABLE(LuauDoNotIceForBindingGeneric)
 LUAU_FASTFLAGVARIABLE(LuauSubtypingSkipUnreadReasoning)
-
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 namespace Luau
 {
@@ -918,6 +918,10 @@ SubtypingResult Subtyping::isCovariantWith(SubtypingEnvironment& env, TypeId sub
             bool ok = bindGeneric(env, subTy, superTy);
             result.isSubtype = ok;
             result.isCacheable = false;
+        }
+        else if (const GenericType* subGen = get<GenericType>(subTy); FFlag::LuauGenericConstraintsSupport && subGen && subGen->constraint)
+        {
+            result = isCovariantWith(env, subTy, *subGen->constraint, scope);
         }
     }
     else if (auto p = get2<UnionType, UnionType>(subTy, superTy))

@@ -402,8 +402,9 @@ class CstGenericType : public CstNode
 public:
     LUAU_CST_RTTI(CstGenericType)
 
-    CstGenericType(Position defaultEqualsPosition);
+    CstGenericType(Position constraintColonPosition, Position defaultEqualsPosition);
 
+    Position constraintColonPosition;
     Position defaultEqualsPosition;
 };
 

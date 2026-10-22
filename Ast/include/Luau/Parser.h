@@ -391,6 +391,7 @@ private:
     // `<' namelist `>'
     std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> parseGenericTypeList(
         bool withDefaultValues,
+        bool withGenericConstraints,
         Position* openPosition = nullptr,
         AstArray<Position>* commaPositions = nullptr,
         Position* closePosition = nullptr

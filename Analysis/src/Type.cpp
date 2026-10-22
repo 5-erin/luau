@@ -29,6 +29,7 @@ LUAU_FASTINTVARIABLE(LuauTypeMaximumStringifierLength, 500)
 LUAU_FASTINTVARIABLE(LuauTableTypeMaximumStringifierLength, 0)
 LUAU_FASTINT(LuauTypeInferRecursionLimit)
 LUAU_FASTFLAG(LuauInstantiateInSubtyping)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 namespace Luau
 {
@@ -565,6 +566,15 @@ GenericType::GenericType(Scope* scope, Name name, Polarity polarity)
 {
 }
 
+GenericType::GenericType(Scope* scope, Name name, std::optional<TypeId> constraint, Polarity polarity)
+    : index(Unifiable::freshIndex())
+    , scope(scope)
+    , name(std::move(name))
+    , explicitName(true)
+    , constraint(constraint)
+    , polarity(polarity)
+{
+}
 
 BlockedType::BlockedType()
     : index(Unifiable::freshIndex())

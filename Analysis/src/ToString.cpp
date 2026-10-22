@@ -21,6 +21,7 @@ LUAU_FASTFLAG(LuauIntegerType2)
 LUAU_FASTFLAG(DebugLuauParseExactTables)
 LUAU_FASTFLAG(DebugLuauExactTableTypes)
 LUAU_FASTFLAGVARIABLE(LuauBetterInferredGenericNames)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 /*
  * Enables increasing levels of verbosity for Luau type names when stringifying.
@@ -565,6 +566,12 @@ struct TypeStringifier
         }
         else
             state.emit(state.getName(ty));
+
+        if (FFlag::LuauGenericConstraintsSupport && gtv.constraint)
+        {
+            state.emit(": ");
+            stringify(*gtv.constraint);
+        }
 
         if (FInt::DebugLuauVerboseTypeNames >= 1)
             state.emit(gtv.polarity);

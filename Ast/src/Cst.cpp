@@ -218,8 +218,9 @@ CstStatLocalFunction::CstStatLocalFunction(AstArray<CstAttrList*> attrLists, Pos
 {
 }
 
-CstGenericType::CstGenericType(Position defaultEqualsPosition)
+CstGenericType::CstGenericType(Position constraintColonPosition, Position defaultEqualsPosition)
     : CstNode(CstClassIndex())
+    , constraintColonPosition(constraintColonPosition)
     , defaultEqualsPosition(defaultEqualsPosition)
 {
 }

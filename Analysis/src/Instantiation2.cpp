@@ -4,6 +4,8 @@
 #include "Luau/Scope.h"
 #include "Luau/Instantiation2.h"
 
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
+
 namespace Luau
 {
 
@@ -121,11 +123,18 @@ void resolveGenericSubstitutions(
     // Resolve each generic type substitution: update the map entry to the
     // best concrete type, leaving the original free type node untouched.
     // Other parts of the solver may still reference it.
-    for (auto& [_, ty] : genericSubstitutions)
+    for (auto& [genTy, ty] : genericSubstitutions)
     {
         ty = follow(ty);
         if (auto ft = get<FreeType>(ty))
             ty = pickBound(ft);
+
+        if (const GenericType* gen = get<GenericType>(genTy); FFlag::LuauGenericConstraintsSupport && gen && gen->constraint)
+        {
+            auto r = subtyping->isSubtype(ty, *gen->constraint, scope);
+            if (!r.isSubtype)
+                genericSubstitutions.erase(genTy);
+        }
     }
 
     // Resolve free types that appear inside type pack substitutions.

@@ -117,12 +117,14 @@ struct GenericType
     GenericType(Scope* scope, const Name& name);
 
     GenericType(Scope* scope, Name name, Polarity polarity);
+    GenericType(Scope* scope, Name name, std::optional<TypeId> constraint, Polarity polarity);
 
     int index;
     TypeLevel level;
     Scope* scope = nullptr;
     Name name;
     bool explicitName = false;
+    std::optional<TypeId> constraint;
 
     Polarity polarity = Polarity::Unknown;
 };
