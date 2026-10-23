@@ -133,6 +133,7 @@ void resolveGenericSubstitutions(
         {
             auto r = subtyping->isSubtype(ty, *gen->constraint, scope);
             if (!r.isSubtype)
+                // This will give a better error message, and also a passable return type, compared to e.g. `never`.
                 genericSubstitutions[genTy] = *gen->constraint;
         }
     }

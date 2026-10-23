@@ -921,7 +921,7 @@ SubtypingResult Subtyping::isCovariantWith(SubtypingEnvironment& env, TypeId sub
         }
         else if (const GenericType* subGen = get<GenericType>(subTy); FFlag::LuauGenericConstraintsSupport && subGen && subGen->constraint)
         {
-            result = isCovariantWith(env, subTy, *subGen->constraint, scope);
+            result = isCovariantWith(env, *subGen->constraint, superTy, scope);
         }
     }
     else if (auto p = get2<UnionType, UnionType>(subTy, superTy))
