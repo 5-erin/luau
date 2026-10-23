@@ -22,6 +22,8 @@ LUAU_FASTINTVARIABLE(LuauGenericCounterMaxSteps, 1500)
 LUAU_FASTFLAG(DebugLuauExactTableTypes)
 LUAU_FASTFLAGVARIABLE(LuauIterativeTypeSearcher)
 LUAU_FLAGVERSION(LuauIterativeTypeSearcher, 2)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
+LUAU_FASTFLAGVARIABLE(DebugLuauGenericSubtypeConstraintsInfer)
 
 namespace Luau
 {
@@ -1332,7 +1334,15 @@ GeneralizationResult<TypeId> generalizeType(
         removeType(arena, builtinTypes, ub, freeTy);
 
         if (follow(ub) != freeTy)
-            emplaceType<BoundType>(asMutable(freeTy), ub);
+        {
+            if (FFlag::LuauGenericConstraintsSupport && FFlag::DebugLuauGenericSubtypeConstraintsInfer && isWithinFunction)
+            {
+                emplaceType<GenericType>(asMutable(freeTy), scope, ub, params.polarity);
+                return {freeTy, /*wasReplacedByGeneric*/ true};
+            }
+            else
+                emplaceType<BoundType>(asMutable(freeTy), ub);
+        }
         else if (!isWithinFunction || params.useCount == 1)
         {
             // If we have some free type:

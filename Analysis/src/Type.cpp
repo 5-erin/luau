@@ -541,6 +541,14 @@ GenericType::GenericType(Scope* scope, Polarity polarity)
 {
 }
 
+GenericType::GenericType(Scope* scope, std::optional<TypeId> constraint, Polarity polarity)
+    : index(Unifiable::freshIndex())
+    , scope(scope)
+    , constraint(constraint)
+    , polarity(polarity)
+{
+}
+
 GenericType::GenericType(TypeLevel level, const Name& name)
     : index(Unifiable::freshIndex())
     , level(level)

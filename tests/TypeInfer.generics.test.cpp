@@ -12,6 +12,7 @@ LUAU_FASTFLAG(DebugLuauForceOldSolver)
 LUAU_FASTFLAG(DebugLuauAssertOnForcedConstraint)
 LUAU_FASTFLAG(LuauGenericConstraintsSyntax)
 LUAU_FASTFLAG(LuauGenericConstraintsSupport)
+LUAU_FASTFLAG(DebugLuauGenericSubtypeConstraintsInfer)
 
 using namespace Luau;
 
@@ -2321,14 +2322,14 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "cli_185450_instantiate_generics_prior_to_pus
     LUAU_REQUIRE_NO_ERRORS(result);
 }
 
-TEST_CASE_FIXTURE(Fixture, "generic_subtype_constraints")
+TEST_CASE_FIXTURE(Fixture, "generic_subtype_constraints_explicit")
 {
     DOES_NOT_PASS_OLD_SOLVER_GUARD();
     ScopedFastFlag genericConstraintsSyntax{FFlag::LuauGenericConstraintsSyntax, true};
     ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
 
     CheckResult result = check(R"(
-        local function f<T: string>(x): T
+        local function f<T: string>(x: T)
             return x
         end
 
@@ -2344,6 +2345,37 @@ TEST_CASE_FIXTURE(Fixture, "generic_subtype_constraints")
 
     CHECK_EQ("Expected this to be 'string', but got 'number'", toString(result.errors[0]));
     CHECK_EQ("Expected this to be 'boolean', but got '\"hello\"'", toString(result.errors[1]));
+
+    // TODO: Fluff.
+    CHECK_EQ("<T: string>(T: string) -> T: string", toString(requireType("f")));
+}
+
+TEST_CASE_FIXTURE(BuiltinsFixture, "generic_subtype_constraints_inferred")
+{
+    DOES_NOT_PASS_OLD_SOLVER_GUARD();
+    ScopedFastFlag genericConstraintsSyntax{FFlag::LuauGenericConstraintsSyntax, true};
+    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
+    ScopedFastFlag DebugLuauGenericSubtypeConstraintsInfer{FFlag::DebugLuauGenericSubtypeConstraintsInfer, true};
+
+    CheckResult result = check(R"(
+        local function f(x)
+            return x, string.len(x)
+        end
+
+        local a: "hello" = f("hello")
+        local b = f(1)
+        local x: boolean = a
+        local y: string = b
+    )");
+    LUAU_REQUIRE_ERROR_COUNT(2, result);
+
+    CHECK_EQ(6, result.errors[0].location.begin.line);
+    CHECK_EQ(7, result.errors[1].location.begin.line);
+
+    CHECK_EQ("Expected this to be 'string', but got 'number'", toString(result.errors[0]));
+    CHECK_EQ("Expected this to be 'boolean', but got '\"hello\"'", toString(result.errors[1]));
+
+    CHECK_EQ("<T: string>(T: string) -> (T: string, number)", toString(requireType("f")));
 }
 
 TEST_SUITE_END();

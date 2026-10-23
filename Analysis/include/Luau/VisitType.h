@@ -11,6 +11,7 @@
 
 LUAU_FASTINT(LuauVisitRecursionLimit)
 LUAU_FASTFLAG(LuauReduceTypeFunctionToSyntheticError)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 namespace Luau
 {
@@ -264,7 +265,10 @@ struct GenericTypeVisitor
             }
         }
         else if (auto gtv = get<GenericType>(ty))
-            visit(ty, *gtv);
+        {
+            if (visit(ty, *gtv) && FFlag::LuauGenericConstraintsSupport && gtv->constraint)
+                traverse(*gtv->constraint);
+        }
         else if (auto etv = get<ErrorType>(ty))
         {
             if (FFlag::LuauReduceTypeFunctionToSyntheticError)

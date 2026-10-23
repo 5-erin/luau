@@ -112,6 +112,7 @@ struct GenericType
     explicit GenericType(TypeLevel level);
     explicit GenericType(const Name& name, Polarity polarity);
     explicit GenericType(Scope* scope, Polarity polarity);
+    explicit GenericType(Scope* scope, std::optional<TypeId> constraint, Polarity polarity);
 
     GenericType(TypeLevel level, const Name& name);
     GenericType(Scope* scope, const Name& name);
