@@ -5171,25 +5171,6 @@ std::vector<std::pair<Name, GenericTypeDefinition>> ConstraintGenerator::createG
     std::vector<std::pair<Name, GenericTypeDefinition>> result;
     for (const auto* generic : generics)
     {
-        std::optional<TypeId> constraintTy = std::nullopt;
-        std::optional<GenericInhabitanceClause> inhabitanceClause = std::nullopt;
-
-        if (FFlag::LuauGenericConstraintsSupport)
-        {
-            if (generic->constraint)
-                constraintTy = resolveType(scope, generic->constraint, false);
-
-            if (generic->inhabitanceClause)
-            {
-                std::vector<TypeId> arguments(generic->inhabitanceClause->arguments.size);
-
-                for (size_t index = 0; index < arguments.size(); index++)
-                    arguments[index] = resolveType(scope, generic->inhabitanceClause->arguments.data[index], false);
-
-                inhabitanceClause = {generic->inhabitanceClause->typeFunction, arguments};
-            }
-        }
-
         TypeId genericTy = nullptr;
 
         if (auto it = scope->parent->typeAliasTypeParameters.find(generic->name.value);
@@ -5197,7 +5178,7 @@ std::vector<std::pair<Name, GenericTypeDefinition>> ConstraintGenerator::createG
             genericTy = it->second;
         else
         {
-            genericTy = arena->addType(GenericType{scope.get(), generic->name.value, constraintTy, inhabitanceClause, Polarity::None});
+            genericTy = arena->addType(GenericType{scope.get(), generic->name.value, Polarity::None});
             scope->parent->typeAliasTypeParameters[generic->name.value] = genericTy;
         }
 
@@ -5210,6 +5191,28 @@ std::vector<std::pair<Name, GenericTypeDefinition>> ConstraintGenerator::createG
             scope->privateTypeBindings[generic->name.value] = TypeFun{genericTy};
 
         result.emplace_back(generic->name.value, GenericTypeDefinition{genericTy, defaultTy});
+    }
+
+    if (FFlag::LuauGenericConstraintsSupport)
+    {
+        for (size_t index = 0; index < generics.size; index++)
+        {
+            const AstGenericType* gen = generics.data[index];
+            GenericType* gtv = getMutable<GenericType>(result[0].second.ty);
+
+            if (gen->constraint)
+                gtv->constraint = resolveType(scope, gen->constraint, false);
+
+            if (gen->inhabitanceClause)
+            {
+                std::vector<TypeId> arguments(gen->inhabitanceClause->arguments.size);
+
+                for (size_t index = 0; index < arguments.size(); index++)
+                    arguments[index] = resolveType(scope, gen->inhabitanceClause->arguments.data[index], false);
+
+                gtv->inhabitanceClause = {gen->inhabitanceClause->typeFunction, arguments};
+            }
+        }
     }
 
     return result;

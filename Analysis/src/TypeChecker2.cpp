@@ -2265,6 +2265,11 @@ void TypeChecker2::visitCall(AstExprCall* call)
             Unifier2 u2{NotNull{&*arena}, builtinTypes, stack.back(), ice};
             u2.unify(follow(*originalCallTy), inferredTy);
 
+            for (TypeId freeTy : u2.newFreshTypes)
+                trackInteriorFreeType(scope, freeTy);
+            for (TypePackId freeTp : u2.newFreshTypePacks)
+                trackInteriorFreeTypePack(scope, freeTp);
+
             for (const auto& [ gen, substitution ] : u2.genericSubstitutions)
             {
                 const auto& constraintIt = inhabitanceConstraints.find(gen);
@@ -2279,13 +2284,34 @@ void TypeChecker2::visitCall(AstExprCall* call)
 
                     // TODO: This is shallow!
                     if (const auto& substitutionIt = u2.genericSubstitutions.find(expected))
-                        arguments[index] = *substitutionIt;
+                        arguments[index] = get<FreeType>(*substitutionIt)->lowerBound;
                     else
                         arguments[index] = expected;
                 }
 
-                TypeId instance = arena->addType(PendingExpansionType{std::nullopt, clause->typeFunction, arguments, {}});
-                checkForTypeFunctionInhabitance(instance, call->location);
+                std::optional<TypeFun> tf = stack.back()->lookupType(clause->typeFunction.value);
+
+                if (tf)
+                {
+                    const TypeFunctionInstanceType* tfit = get<TypeFunctionInstanceType>(follow(tf->type));
+                    LUAU_ASSERT(tfit);
+
+                    TypeId instance = arena->addType(
+                        TypeFunctionInstanceType{
+                            tfit->function,
+                            arguments,
+                            {},
+                            tfit->userFuncName,
+                            tfit->userFuncData,
+                        }
+                    );
+
+                    checkForTypeFunctionInhabitance(instance, call->location);
+                }
+                else
+                {
+                    reportError(UnknownSymbol{clause->typeFunction.value, UnknownSymbol::Context::Type}, call->location);
+                }
             }
         }
 
