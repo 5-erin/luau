@@ -271,7 +271,8 @@ AstExprIndexName::AstExprIndexName(
     const AstName& index,
     const Location& indexLocation,
     const Position& opPosition,
-    char op
+    char op,
+    bool privateAccess
 )
     : AstExpr(ClassIndex(), location)
     , expr(expr)
@@ -279,6 +280,7 @@ AstExprIndexName::AstExprIndexName(
     , indexLocation(indexLocation)
     , opPosition(opPosition)
     , op(op)
+    , privateAccess(privateAccess)
 {
 }
 

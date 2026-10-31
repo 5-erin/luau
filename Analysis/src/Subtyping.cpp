@@ -23,13 +23,13 @@ LUAU_DYNAMIC_FASTINTVARIABLE(LuauSubtypingRecursionLimit, 100)
 LUAU_FASTFLAGVARIABLE(DebugLuauSubtypingCheckPathValidity)
 LUAU_FASTINTVARIABLE(LuauSubtypingReasoningLimit, 100)
 LUAU_FASTINTVARIABLE(LuauSubtypingIterationLimit, 20000)
-LUAU_FASTFLAG(LuauPropertyModifierMismatchErrors)
 LUAU_FASTFLAGVARIABLE(LuauImproveUniqueTableWidthSubtyping)
 LUAU_FASTFLAG(LuauRefactorStringSemanticSubtyping)
 LUAU_FASTFLAG(DebugLuauExactTableTypes)
-LUAU_FASTFLAGVARIABLE(LuauDoNotIceForBindingGeneric)
 LUAU_FASTFLAGVARIABLE(LuauSubtypingSkipUnreadReasoning)
+LUAU_FASTFLAGVARIABLE(LuauOnlyCheckWidthSubtypingForReadOnlyProperty)
 LUAU_FASTFLAG(LuauGenericConstraintsSupport)
+
 
 namespace Luau
 {
@@ -2161,16 +2161,29 @@ SubtypingResult Subtyping::isCovariantWith(
         {
             SubtypingResult result;
 
-            if (FFlag::LuauImproveUniqueTableWidthSubtyping)
+            if (FFlag::LuauOnlyCheckWidthSubtypingForReadOnlyProperty)
             {
-                if (forceCovariantTest)
-                    result = isCovariantWith(env, Property::rw(builtinTypes->nilType), superProp, name, forceCovariantTest, scope);
+                // Under width subtyping, {} <: { read X: T } if `X` is
+                // *exactly* `unknown` (or `any`). In any other case
+                // subtyping will fail.
+                if (superProp.isReadOnly())
+                    result = isCovariantWith(env, Property::readonly(builtinTypes->unknownType), superProp, name, forceCovariantTest, scope);
                 else
-                    result = isCovariantWith(env, Property::readonly(builtinTypes->nilType), superProp, name, forceCovariantTest, scope);
+                    result = { false };
             }
             else
             {
-                result = isCovariantWith(env, Property::readonly(builtinTypes->nilType), superProp, name, forceCovariantTest, scope);
+                if (FFlag::LuauImproveUniqueTableWidthSubtyping)
+                {
+                    if (forceCovariantTest)
+                        result = isCovariantWith(env, Property::rw(builtinTypes->nilType), superProp, name, forceCovariantTest, scope);
+                    else
+                        result = isCovariantWith(env, Property::readonly(builtinTypes->nilType), superProp, name, forceCovariantTest, scope);
+                }
+                else
+                {
+                    result = isCovariantWith(env, Property::readonly(builtinTypes->nilType), superProp, name, forceCovariantTest, scope);
+                }
             }
 
             // We must ignore the actual reasoning from here because the subtype doesn't have a property to traverse into later.
@@ -2615,8 +2628,7 @@ SubtypingResult Subtyping::isCovariantWith(
     if (subIndexer.isReadOnly && !superIndexer.isReadOnly)
     {
         result.withBothComponent(TypePath::TypeField::IndexResult);
-        if (FFlag::LuauPropertyModifierMismatchErrors)
-            result.withPropertyModifierViolation();
+        result.withPropertyModifierViolation();
         return result;
     }
 
@@ -2663,19 +2675,9 @@ SubtypingResult Subtyping::isCovariantWith(
         if (superProp.isReadWrite())
         {
             if (subProp.isReadOnly())
-            {
-                if (FFlag::LuauPropertyModifierMismatchErrors)
-                    res.andAlso(SubtypingResult{false}.withBothComponent(TypePath::Property::read(name)).withPropertyModifierViolation());
-                else
-                    res.andAlso(SubtypingResult{false}.withBothComponent(TypePath::Property::read(name)));
-            }
+                res.andAlso(SubtypingResult{false}.withBothComponent(TypePath::Property::read(name)).withPropertyModifierViolation());
             else if (subProp.isWriteOnly())
-            {
-                if (FFlag::LuauPropertyModifierMismatchErrors)
-                    res.andAlso(SubtypingResult{false}.withBothComponent(TypePath::Property::write(name)).withPropertyModifierViolation());
-                else
-                    res.andAlso(SubtypingResult{false}.withBothComponent(TypePath::Property::write(name)));
-            }
+                res.andAlso(SubtypingResult{false}.withBothComponent(TypePath::Property::write(name)).withPropertyModifierViolation());
         }
     }
 
@@ -2901,8 +2903,6 @@ bool Subtyping::bindGeneric(SubtypingEnvironment& env, TypeId subTy, TypeId supe
         else
             upperSubBounds.insert(superTy);
     }
-    else if (!FFlag::LuauDoNotIceForBindingGeneric && env.containsMappedType(subTy))
-        iceReporter->ice("attempting to modify bounds of a potentially visited generic");
 
     if (const auto superBounds = env.mappedGenerics.find(superTy); superBounds && !superBounds->empty())
     {
@@ -2921,8 +2921,6 @@ bool Subtyping::bindGeneric(SubtypingEnvironment& env, TypeId subTy, TypeId supe
         else
             lowerSuperBounds.insert(subTy);
     }
-    else if (!FFlag::LuauDoNotIceForBindingGeneric && env.containsMappedType(superTy))
-        iceReporter->ice("attempting to modify bounds of a potentially visited generic");
 
     return true;
 }
