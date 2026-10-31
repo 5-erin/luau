@@ -1337,7 +1337,7 @@ GeneralizationResult<TypeId> generalizeType(
         {
             if (FFlag::LuauGenericConstraintsSupport && FFlag::DebugLuauGenericSubtypeConstraintsInfer && isWithinFunction)
             {
-                emplaceType<GenericType>(asMutable(freeTy), scope, ub, params.polarity);
+                emplaceType<GenericType>(asMutable(freeTy), scope, ub, std::nullopt, params.polarity);
                 return {freeTy, /*wasReplacedByGeneric*/ true};
             }
             else

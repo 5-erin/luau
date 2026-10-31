@@ -5172,8 +5172,23 @@ std::vector<std::pair<Name, GenericTypeDefinition>> ConstraintGenerator::createG
     for (const auto* generic : generics)
     {
         std::optional<TypeId> constraintTy = std::nullopt;
-        if (generic->constraint)
-            constraintTy = resolveType(scope, generic->constraint, false);
+        std::optional<GenericInhabitanceClause> inhabitanceClause = std::nullopt;
+
+        if (FFlag::LuauGenericConstraintsSupport)
+        {
+            if (generic->constraint)
+                constraintTy = resolveType(scope, generic->constraint, false);
+
+            if (generic->inhabitanceClause)
+            {
+                std::vector<TypeId> arguments(generic->inhabitanceClause->arguments.size);
+
+                for (size_t index = 0; index < arguments.size(); index++)
+                    arguments[index] = resolveType(scope, generic->inhabitanceClause->arguments.data[index], false);
+
+                inhabitanceClause = {generic->inhabitanceClause->typeFunction, arguments};
+            }
+        }
 
         TypeId genericTy = nullptr;
 
@@ -5182,7 +5197,7 @@ std::vector<std::pair<Name, GenericTypeDefinition>> ConstraintGenerator::createG
             genericTy = it->second;
         else
         {
-            genericTy = arena->addType(GenericType{scope.get(), generic->name.value, constraintTy, Polarity::None});
+            genericTy = arena->addType(GenericType{scope.get(), generic->name.value, constraintTy, inhabitanceClause, Polarity::None});
             scope->parent->typeAliasTypeParameters[generic->name.value] = genericTy;
         }
 

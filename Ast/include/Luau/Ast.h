@@ -277,17 +277,32 @@ public:
     bool hasSemicolon;
 };
 
+// `with F<T, U>`
+struct AstGenericInhabitanceClause
+{
+    AstName typeFunction;
+    AstArray<AstType*> arguments;
+};
+
 class AstGenericType : public AstNode
 {
 public:
     LUAU_RTTI(AstGenericType)
 
-    explicit AstGenericType(const Location& location, AstName name, AstType* constraint = nullptr, AstType* defaultValue = nullptr);
+    explicit AstGenericType(
+        const Location& location,
+        AstName name,
+        AstType* constraint = nullptr,
+        std::optional<AstGenericInhabitanceClause> inhabitanceClause = std::nullopt,
+        AstType* defaultValue = nullptr
+    );
+
 
     void visit(AstVisitor* visitor) override;
 
     AstName name;
     AstType* constraint = nullptr;
+    std::optional<AstGenericInhabitanceClause> inhabitanceClause;
     AstType* defaultValue = nullptr;
 };
 

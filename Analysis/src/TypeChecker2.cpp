@@ -26,6 +26,7 @@
 #include "Luau/TypeUtils.h"
 #include "Luau/TypeOrPack.h"
 #include "Luau/VisitType.h"
+#include "Luau/Unifier2.h"
 
 #include <algorithm>
 #include <sstream>
@@ -2239,6 +2240,55 @@ void TypeChecker2::visitCall(AstExprCall* call)
     {
         if (result2.ok.size() > 1)
             reportError(AmbiguousFunctionCall{fnTy, argsPack}, call->location);
+
+        std::unordered_map<TypeId, const GenericInhabitanceClause*> inhabitanceConstraints;
+        const FunctionType* ftv = get<FunctionType>(follow(*originalCallTy));
+
+        for (TypeId gen : ftv->generics)
+        {
+            const GenericType* gtv = get<GenericType>(gen);
+            LUAU_ASSERT(gtv);
+
+            if (gtv->inhabitanceClause)
+                inhabitanceConstraints[gen] = &*gtv->inhabitanceClause;
+        }
+
+        if (!inhabitanceConstraints.empty())
+        {
+            std::shared_ptr<TypeArena> arena = module->internalTypes;
+
+            TypePackId retTp = arena->freshTypePack(stack.back(), Polarity::Positive);
+            trackInteriorFreeTypePack(stack.back(), retTp);
+
+            TypeId inferredTy = arena->addType(FunctionType{TypeLevel{}, argsPack, retTp});
+
+            Unifier2 u2{NotNull{&*arena}, builtinTypes, stack.back(), ice};
+            u2.unify(follow(*originalCallTy), inferredTy);
+
+            for (const auto& [ gen, substitution ] : u2.genericSubstitutions)
+            {
+                const auto& constraintIt = inhabitanceConstraints.find(gen);
+                LUAU_ASSERT(constraintIt != inhabitanceConstraints.end());
+
+                const GenericInhabitanceClause* clause = constraintIt->second;
+                std::vector<TypeId> arguments(clause->arguments.size());
+
+                for (size_t index = 0; index < arguments.size(); index++)
+                {
+                    TypeId expected = clause->arguments[index];
+
+                    // TODO: This is shallow!
+                    if (const auto& substitutionIt = u2.genericSubstitutions.find(expected))
+                        arguments[index] = *substitutionIt;
+                    else
+                        arguments[index] = expected;
+                }
+
+                TypeId instance = arena->addType(PendingExpansionType{std::nullopt, clause->typeFunction, arguments, {}});
+                checkForTypeFunctionInhabitance(instance, call->location);
+            }
+        }
+
         return;
     }
 

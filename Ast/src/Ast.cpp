@@ -96,10 +96,11 @@ AstAttr::DeprecatedInfo AstAttr::deprecatedInfo() const
 
 int gAstRttiIndex = 0;
 
-AstGenericType::AstGenericType(const Location& location, AstName name, AstType* constraint, AstType* defaultValue)
+AstGenericType::AstGenericType(const Location& location, AstName name, AstType* constraint, std::optional<AstGenericInhabitanceClause> inhabitanceClause, AstType* defaultValue)
     : AstNode(ClassIndex(), location)
     , name(name)
     , constraint(constraint)
+    , inhabitanceClause(inhabitanceClause)
     , defaultValue(defaultValue)
 {
 }

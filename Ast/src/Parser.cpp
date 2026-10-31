@@ -4822,12 +4822,46 @@ std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::pars
             {
                 Position constraintColonPosition = Position::missing();
                 AstType* constraint = nullptr;
+                std::optional<AstGenericInhabitanceClause> inhabitanceClause;
 
-                if (FFlag::LuauGenericConstraintsSyntax && withGenericConstraints && lexer.current().type == ':')
+                if (FFlag::LuauGenericConstraintsSyntax && withGenericConstraints)
                 {
-                    constraintColonPosition = lexer.current().location.begin;
-                    nextLexeme();
-                    constraint = parseType();
+                    if (lexer.current().type == ':')
+                    {
+                        constraintColonPosition = lexer.current().location.begin;
+                        nextLexeme();
+                        constraint = parseType();
+                    }
+
+                    if (lexer.current().type == Lexeme::Name && AstName(lexer.current().name) == "with")
+                    {
+                        nextLexeme();
+
+                        if (lexer.current().type == Lexeme::Name)
+                        {
+                            AstName typeFunction(lexer.current().name);
+                            nextLexeme();
+
+                            expectAndConsume('<', "type function argument list");
+                            TempVector<AstType*> arguments(scratchType);
+
+                            while (lexer.current().type != '>')
+                            {
+                                arguments.push_back(parseType(/* in declaration context */ true));
+
+                                if (lexer.current().type != '>')
+                                    expectAndConsume(',', "type argument separator");
+                            }
+
+                            expectAndConsume('>', "end of type function argument list");
+                            inhabitanceClause = AstGenericInhabitanceClause{typeFunction, copy<AstType*>(arguments)};
+                        }
+                        else
+                        {
+                            report(lexer.current().location, "Expected type function name");
+                            nextLexeme();
+                        }
+                    }
                 }
 
                 if (withDefaultValues && lexer.current().type == '=')
@@ -4838,7 +4872,7 @@ std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::pars
 
                     AstType* defaultType = parseType();
 
-                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, constraint, defaultType);
+                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, constraint, inhabitanceClause, defaultType);
                     if (options.storeCstData)
                         cstNodeMap[node] = allocator.alloc<CstGenericType>(constraintColonPosition, equalsPosition);
                     names.push_back(node);
@@ -4848,7 +4882,7 @@ std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::pars
                     if (seenDefault)
                         report(lexer.current().location, "Expected default type after type name");
 
-                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, constraint, nullptr);
+                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, constraint, inhabitanceClause, nullptr);
                     if (options.storeCstData)
                         cstNodeMap[node] = allocator.alloc<CstGenericType>(constraintColonPosition, Position::missing());
                     names.push_back(node);
