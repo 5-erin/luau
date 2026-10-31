@@ -391,9 +391,21 @@ struct FunctionType
         bool hasSelf = false
     );
 
+    FunctionType(
+        TypeLevel level,
+        std::vector<TypeId> generics,
+        std::vector<GenericInhabitanceClause> inhabitanceClauses,
+        std::vector<TypePackId> genericPacks,
+        TypePackId argTypes,
+        TypePackId retTypes,
+        std::optional<FunctionDefinition> defn = {},
+        bool hasSelf = false
+    );
+
     std::optional<FunctionDefinition> definition;
     /// These should all be generic
     std::vector<TypeId> generics;
+    std::vector<GenericInhabitanceClause> inhabitanceClauses;
     std::vector<TypePackId> genericPacks;
     std::vector<std::optional<FunctionArgument>> argNames;
     Tags tags;

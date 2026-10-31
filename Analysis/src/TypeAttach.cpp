@@ -321,6 +321,11 @@ public:
                 generics.data[numGenerics++] = allocator->alloc<AstGenericType>(Location(), AstName(gtv->name.c_str()), nullptr);
         }
 
+        AstArray<AstGenericInhabitanceClause> inhabitanceClauses;
+        inhabitanceClauses.size = 0;
+        inhabitanceClauses.data = nullptr;
+        // TODO
+
         AstArray<AstGenericTypePack*> genericPacks;
         genericPacks.size = ftv.genericPacks.size();
         genericPacks.data = static_cast<AstGenericTypePack**>(allocator->allocate(sizeof(AstGenericTypePack) * genericPacks.size));
@@ -377,7 +382,7 @@ public:
 
         auto returnAnnotation = allocator->alloc<AstTypePackExplicit>(Location(), AstTypeList{returnTypes, retTailAnnotation});
         return allocator->alloc<AstTypeFunction>(
-            Location(), generics, genericPacks, AstTypeList{argTypes, argTailAnnotation}, argNames, returnAnnotation
+            Location(), generics, inhabitanceClauses, genericPacks, AstTypeList{argTypes, argTailAnnotation}, argNames, returnAnnotation
         );
     }
     AstType* operator()(const ErrorType&)

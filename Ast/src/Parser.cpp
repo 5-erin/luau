@@ -1540,7 +1540,7 @@ AstStat* Parser::parseTypeAlias(const Location& start, bool exported, Position t
     Position genericsOpenPosition = Position::missing();
     AstArray<Position> genericsCommaPositions;
     Position genericsClosePosition = Position::missing();
-    auto [generics, genericPacks] = options.storeCstData
+    const GenericTypeList typeParameters = options.storeCstData
                                         ? parseGenericTypeList(
                                               /* withDefaultValues= */ true, /* withGenericConstraints */ false, &genericsOpenPosition, &genericsCommaPositions, &genericsClosePosition
                                           )
@@ -1552,7 +1552,7 @@ AstStat* Parser::parseTypeAlias(const Location& start, bool exported, Position t
     AstType* type = parseType();
 
     AstStatTypeAlias* node =
-        allocator.alloc<AstStatTypeAlias>(Location(start, type->location), name->name, name->location, generics, genericPacks, type, exported);
+        allocator.alloc<AstStatTypeAlias>(Location(start, type->location), name->name, name->location, typeParameters.generics, typeParameters.genericPacks, type, exported);
     if (options.storeCstData)
         cstNodeMap[node] = allocator.alloc<CstStatTypeAlias>(
             typeKeywordPosition, genericsOpenPosition, genericsCommaPositions, genericsClosePosition, equalsPosition
@@ -1947,7 +1947,7 @@ AstDeclaredExternTypeProperty Parser::parseDeclaredExternTypeMethod(const AstArr
         report(start, "All declaration parameters aside from 'self' must be annotated");
 
     AstType* fnType = allocator.alloc<AstTypeFunction>(
-        Location(start, end), attributes, generics, genericPacks, AstTypeList{copy(vars), varargAnnotation}, copy(varNames), retTypes
+        Location(start, end), attributes, generics, copy<AstGenericInhabitanceClause>(nullptr, 0), genericPacks, AstTypeList{copy(vars), varargAnnotation}, copy(varNames), retTypes
     );
 
     return AstDeclaredExternTypeProperty{fnName.name, fnName.location, fnType, true, Location(start, end)};
@@ -1971,7 +1971,7 @@ AstStat* Parser::parseDeclaration(const Location& start, const AstArray<AstAttr*
         nextLexeme();
 
         Name globalName = parseName("global function name");
-        auto [generics, genericPacks] = parseGenericTypeList(/* withDefaultValues= */ false, /* withGenericConstraints */ true);
+        GenericTypeList typeParameters = parseGenericTypeList(/* withDefaultValues= */ false, /* withGenericConstraints */ true);
 
         MatchLexeme matchParen = lexer.current();
 
@@ -2014,8 +2014,9 @@ AstStat* Parser::parseDeclaration(const Location& start, const AstArray<AstAttr*
             attributes,
             globalName.name,
             globalName.location,
-            generics,
-            genericPacks,
+            typeParameters.generics,
+            typeParameters.inhabitanceClauses,
+            typeParameters.genericPacks,
             AstTypeList{copy(vars), varargAnnotation},
             copy(varNames),
             vararg,
@@ -2425,7 +2426,7 @@ std::pair<AstExprFunction*, AstLocal*> Parser::parseFunctionBody(
     if (cstNode && cstAttrLists)
         cstNode->attrLists = copy(*cstAttrLists);
 
-    auto [generics, genericPacks] =
+    const GenericTypeList typeParameters =
         cstNode
             ? parseGenericTypeList(
                   /* withDefaultValues= */ false, /* withGenericConstraints */ true, &cstNode->openGenericsPosition, &cstNode->genericsCommaPositions, &cstNode->closeGenericsPosition
@@ -2503,8 +2504,9 @@ std::pair<AstExprFunction*, AstLocal*> Parser::parseFunctionBody(
     AstExprFunction* node = allocator.alloc<AstExprFunction>(
         Location(start, end),
         attributes,
-        generics,
-        genericPacks,
+        typeParameters.generics,
+        typeParameters.inhabitanceClauses,
+        typeParameters.genericPacks,
         self,
         vars,
         vararg,
@@ -2848,7 +2850,7 @@ AstTypePack* Parser::parseReturnType()
     }
 
     Position returnArrowPosition = lexer.current().location.begin;
-    AstType* tail = parseFunctionTypeTail(begin, {nullptr, 0}, {}, {}, copy(result), copy(resultNames), varargAnnotation);
+    AstType* tail = parseFunctionTypeTail(begin, {nullptr, 0}, {}, {}, {}, copy(result), copy(resultNames), varargAnnotation);
 
     if (options.storeCstData && tail->is<AstTypeFunction>())
     {
@@ -3135,7 +3137,7 @@ AstTypeOrPack Parser::parseFunctionType(bool allowPack, const AstArray<AstAttr*>
     Position genericsOpenPosition = Position::missing();
     AstArray<Position> genericsCommaPositions;
     Position genericsClosePosition = Position::missing();
-    auto [generics, genericPacks] = options.storeCstData
+    GenericTypeList typeParameters = options.storeCstData
                                         ? parseGenericTypeList(
                                               /* withDefaultValues= */ false, /* withGenericConstraints */ true, &genericsOpenPosition, &genericsCommaPositions, &genericsClosePosition
                                           )
@@ -3213,7 +3215,7 @@ AstTypeOrPack Parser::parseFunctionType(bool allowPack, const AstArray<AstAttr*>
     AstArray<std::optional<AstArgumentName>> paramNames = copy(names);
 
     Position returnArrowPosition = lexer.current().location.begin;
-    AstType* node = parseFunctionTypeTail(begin, attributes, generics, genericPacks, paramTypes, paramNames, varargAnnotation);
+    AstType* node = parseFunctionTypeTail(begin, attributes, typeParameters.generics, typeParameters.inhabitanceClauses, typeParameters.genericPacks, paramTypes, paramNames, varargAnnotation);
     if (options.storeCstData && node->is<AstTypeFunction>())
     {
         cstNodeMap[node] = allocator.alloc<CstTypeFunction>(
@@ -3234,6 +3236,7 @@ AstType* Parser::parseFunctionTypeTail(
     const Lexeme& begin,
     const AstArray<AstAttr*>& attributes,
     AstArray<AstGenericType*> generics,
+    AstArray<AstGenericInhabitanceClause> inhabitanceClauses,
     AstArray<AstGenericTypePack*> genericPacks,
     AstArray<AstType*> params,
     AstArray<std::optional<AstArgumentName>> paramNames,
@@ -3264,7 +3267,7 @@ AstType* Parser::parseFunctionTypeTail(
 
     AstTypeList paramTypes = AstTypeList{params, varargAnnotation};
     return allocator.alloc<AstTypeFunction>(
-        Location(begin.location, returnType->location), attributes, generics, genericPacks, paramTypes, paramNames, returnType
+        Location(begin.location, returnType->location), attributes, generics, inhabitanceClauses, genericPacks, paramTypes, paramNames, returnType
     );
 }
 
@@ -4740,7 +4743,44 @@ Parser::Name Parser::parseIndexName(const char* context, const Position& previou
     return Name(nameError, location);
 }
 
-std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::parseGenericTypeList(
+std::optional<AstGenericInhabitanceClause> Parser::tryParseGenericInhabitanceClauseInner()
+{
+    if (lexer.current().type != Lexeme::Name || AstName(lexer.current().name) != "with")
+    {
+        report(lexer.current().location, "Expected 'with'");
+        return std::nullopt;
+    }
+
+    nextLexeme();
+
+    if (lexer.current().type == Lexeme::Name)
+    {
+        AstName typeFunction(lexer.current().name);
+        nextLexeme();
+
+        expectAndConsume('<', "type function argument list");
+        TempVector<AstType*> arguments(scratchType);
+
+        while (lexer.current().type != '>')
+        {
+            arguments.push_back(parseType(/* in declaration context */ true));
+
+            if (lexer.current().type != '>')
+                expectAndConsume(',', "type argument separator");
+        }
+
+        expectAndConsume('>', "end of type function argument list");
+        return AstGenericInhabitanceClause{typeFunction, copy<AstType*>(arguments)};
+    }
+    else
+    {
+        report(lexer.current().location, "Expected type function name");
+        nextLexeme();
+        return std::nullopt;
+    }
+}
+
+Parser::GenericTypeList Parser::parseGenericTypeList(
     bool withDefaultValues,
     bool withGenericConstraints,
     Position* openPosition,
@@ -4749,6 +4789,7 @@ std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::pars
 )
 {
     TempVector<AstGenericType*> names{scratchGenericTypes};
+    TempVector<AstGenericInhabitanceClause> clauses{scratchInhabitanceClauses};
     TempVector<AstGenericTypePack*> namePacks{scratchGenericTypePacks};
     TempVector<Position> localCommaPositions{scratchPosition};
 
@@ -4764,6 +4805,16 @@ std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::pars
 
         while (true)
         {
+            if (FFlag::LuauGenericConstraintsSyntax && withGenericConstraints && lexer.current().type == Lexeme::Name)
+            {
+                if (AstName(lexer.current().name) == "with" && lexer.lookahead().type == Lexeme::Name)
+                {
+                    if (std::optional<AstGenericInhabitanceClause> clause = tryParseGenericInhabitanceClauseInner())
+                        scratchInhabitanceClauses.push_back(*clause);
+                    continue;
+                }
+            }
+
             Location nameLocation = lexer.current().location;
             AstName name = parseName().name;
             if (lexer.current().type == Lexeme::Dot3 || seenPack)
@@ -4834,34 +4885,7 @@ std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::pars
                     }
 
                     if (lexer.current().type == Lexeme::Name && AstName(lexer.current().name) == "with")
-                    {
-                        nextLexeme();
-
-                        if (lexer.current().type == Lexeme::Name)
-                        {
-                            AstName typeFunction(lexer.current().name);
-                            nextLexeme();
-
-                            expectAndConsume('<', "type function argument list");
-                            TempVector<AstType*> arguments(scratchType);
-
-                            while (lexer.current().type != '>')
-                            {
-                                arguments.push_back(parseType(/* in declaration context */ true));
-
-                                if (lexer.current().type != '>')
-                                    expectAndConsume(',', "type argument separator");
-                            }
-
-                            expectAndConsume('>', "end of type function argument list");
-                            inhabitanceClause = AstGenericInhabitanceClause{typeFunction, copy<AstType*>(arguments)};
-                        }
-                        else
-                        {
-                            report(lexer.current().location, "Expected type function name");
-                            nextLexeme();
-                        }
-                    }
+                        inhabitanceClause = tryParseGenericInhabitanceClauseInner();
                 }
 
                 if (withDefaultValues && lexer.current().type == '=')
@@ -4914,8 +4938,9 @@ std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> Parser::pars
         *commaPositions = copy(localCommaPositions);
 
     AstArray<AstGenericType*> generics = copy(names);
+    AstArray<AstGenericInhabitanceClause> inhabitanceClauses = copy(clauses);
     AstArray<AstGenericTypePack*> genericPacks = copy(namePacks);
-    return {generics, genericPacks};
+    return {generics, inhabitanceClauses, genericPacks};
 }
 
 AstArray<AstTypeOrPack> Parser::parseTypeParams(Position* openingPosition, TempVector<Position>* commaPositions, Position* closingPosition)

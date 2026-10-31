@@ -1,6 +1,7 @@
 // This file is part of the Luau programming language and is licensed under MIT License; see LICENSE.txt for details
 #pragma once
 
+#include "Ast.h"
 #include "Luau/Ast.h"
 #include "Luau/Lexer.h"
 #include "Luau/ParseOptions.h"
@@ -304,6 +305,7 @@ private:
         const Lexeme& begin,
         const AstArray<AstAttr*>& attributes,
         AstArray<AstGenericType*> generics,
+        AstArray<AstGenericInhabitanceClause> inhabitanceClauses,
         AstArray<AstGenericTypePack*> genericPacks,
         AstArray<AstType*> params,
         AstArray<std::optional<AstArgumentName>> paramNames,
@@ -392,8 +394,18 @@ private:
     Name parseName(const char* context = nullptr);
     Name parseIndexName(const char* context, const Position& previous);
 
-    // `<' namelist `>'
-    std::pair<AstArray<AstGenericType*>, AstArray<AstGenericTypePack*>> parseGenericTypeList(
+    // `with` `<` [TypeList] `>`
+    std::optional<AstGenericInhabitanceClause> tryParseGenericInhabitanceClauseInner();
+
+    struct GenericTypeList
+    {
+        AstArray<AstGenericType*> generics;
+        AstArray<AstGenericInhabitanceClause> inhabitanceClauses;
+        AstArray<AstGenericTypePack*> genericPacks;
+    };
+
+    // `<' namelist | with NAME `<` [TypeList] `>` `>'
+    GenericTypeList parseGenericTypeList(
         bool withDefaultValues,
         bool withGenericConstraints,
         Position* openPosition = nullptr,
@@ -599,6 +611,7 @@ private:
     std::vector<CstExprTable::Item> scratchCstItem;
     std::vector<AstArgumentName> scratchArgName;
     std::vector<AstGenericType*> scratchGenericTypes;
+    std::vector<AstGenericInhabitanceClause> scratchInhabitanceClauses;
     std::vector<AstGenericTypePack*> scratchGenericTypePacks;
     std::vector<std::optional<AstArgumentName>> scratchOptArgName;
     std::vector<Position> scratchPosition;
