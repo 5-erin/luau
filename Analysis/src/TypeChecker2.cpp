@@ -2241,19 +2241,10 @@ void TypeChecker2::visitCall(AstExprCall* call)
         if (result2.ok.size() > 1)
             reportError(AmbiguousFunctionCall{fnTy, argsPack}, call->location);
 
-        std::unordered_map<TypeId, const GenericInhabitanceClause*> inhabitanceConstraints;
         const FunctionType* ftv = get<FunctionType>(follow(*originalCallTy));
+        LUAU_ASSERT(ftv);
 
-        for (TypeId gen : ftv->generics)
-        {
-            const GenericType* gtv = get<GenericType>(gen);
-            LUAU_ASSERT(gtv);
-
-            if (gtv->inhabitanceClause)
-                inhabitanceConstraints[gen] = &*gtv->inhabitanceClause;
-        }
-
-        if (!inhabitanceConstraints.empty())
+        if (!ftv->inhabitanceClauses.empty())
         {
             std::shared_ptr<TypeArena> arena = module->internalTypes;
 
@@ -2270,26 +2261,25 @@ void TypeChecker2::visitCall(AstExprCall* call)
             for (TypePackId freeTp : u2.newFreshTypePacks)
                 trackInteriorFreeTypePack(scope, freeTp);
 
-            for (const auto& [ gen, substitution ] : u2.genericSubstitutions)
+            for (const GenericInhabitanceClause& clause : ftv->inhabitanceClauses)
             {
-                const auto& constraintIt = inhabitanceConstraints.find(gen);
-                LUAU_ASSERT(constraintIt != inhabitanceConstraints.end());
+                std::vector<TypeId> arguments(clause.arguments.size());
 
-                const GenericInhabitanceClause* clause = constraintIt->second;
-                std::vector<TypeId> arguments(clause->arguments.size());
-
-                for (size_t index = 0; index < arguments.size(); index++)
+                for (const auto& [ gen, substitution ] : u2.genericSubstitutions)
                 {
-                    TypeId expected = clause->arguments[index];
+                    for (size_t index = 0; index < arguments.size(); index++)
+                    {
+                        TypeId expected = clause.arguments[index];
 
-                    // TODO: This is shallow!
-                    if (const auto& substitutionIt = u2.genericSubstitutions.find(expected))
-                        arguments[index] = get<FreeType>(*substitutionIt)->lowerBound;
-                    else
-                        arguments[index] = expected;
+                        // TODO: This is shallow! Consider `<T with F<{T}>>(T) -> T`
+                        if (gen == expected)
+                            arguments[index] = get<FreeType>(substitution)->lowerBound;
+                        else
+                            arguments[index] = expected;
+                    }
                 }
 
-                std::optional<TypeFun> tf = stack.back()->lookupType(clause->typeFunction.value);
+                std::optional<TypeFun> tf = stack.back()->lookupType(clause.typeFunction.value);
 
                 if (tf)
                 {
@@ -2310,7 +2300,7 @@ void TypeChecker2::visitCall(AstExprCall* call)
                 }
                 else
                 {
-                    reportError(UnknownSymbol{clause->typeFunction.value, UnknownSymbol::Context::Type}, call->location);
+                    reportError(UnknownSymbol{clause.typeFunction.value, UnknownSymbol::Context::Type}, call->location);
                 }
             }
         }

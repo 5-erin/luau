@@ -4810,7 +4810,24 @@ Parser::GenericTypeList Parser::parseGenericTypeList(
                 if (AstName(lexer.current().name) == "with" && lexer.lookahead().type == Lexeme::Name)
                 {
                     if (std::optional<AstGenericInhabitanceClause> clause = tryParseGenericInhabitanceClauseInner())
-                        scratchInhabitanceClauses.push_back(*clause);
+                        clauses.push_back(*clause);
+
+                    // TODO: Segfaults?
+                    /*
+                    if (lexer.current().type == ',')
+                    {
+                        nextLexeme();
+                        if (lexer.current().type == '>')
+                        {
+                            report(lexer.current().location, "Expected type or constraint after ',', got '>'");
+                            break;
+                        }
+
+                        continue;
+                    }
+                    else if (lexer.current().type == '>')
+                        break;
+                    */
                     continue;
                 }
             }
@@ -4873,7 +4890,6 @@ Parser::GenericTypeList Parser::parseGenericTypeList(
             {
                 Position constraintColonPosition = Position::missing();
                 AstType* constraint = nullptr;
-                std::optional<AstGenericInhabitanceClause> inhabitanceClause;
 
                 if (FFlag::LuauGenericConstraintsSyntax && withGenericConstraints)
                 {
@@ -4885,7 +4901,10 @@ Parser::GenericTypeList Parser::parseGenericTypeList(
                     }
 
                     if (lexer.current().type == Lexeme::Name && AstName(lexer.current().name) == "with")
-                        inhabitanceClause = tryParseGenericInhabitanceClauseInner();
+                    {
+                        if (std::optional<AstGenericInhabitanceClause> clause = tryParseGenericInhabitanceClauseInner())
+                            clauses.push_back(*clause);
+                    }
                 }
 
                 if (withDefaultValues && lexer.current().type == '=')
@@ -4896,7 +4915,7 @@ Parser::GenericTypeList Parser::parseGenericTypeList(
 
                     AstType* defaultType = parseType();
 
-                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, constraint, inhabitanceClause, defaultType);
+                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, constraint, defaultType);
                     if (options.storeCstData)
                         cstNodeMap[node] = allocator.alloc<CstGenericType>(constraintColonPosition, equalsPosition);
                     names.push_back(node);
@@ -4906,7 +4925,7 @@ Parser::GenericTypeList Parser::parseGenericTypeList(
                     if (seenDefault)
                         report(lexer.current().location, "Expected default type after type name");
 
-                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, constraint, inhabitanceClause, nullptr);
+                    AstGenericType* node = allocator.alloc<AstGenericType>(nameLocation, name, constraint, nullptr);
                     if (options.storeCstData)
                         cstNodeMap[node] = allocator.alloc<CstGenericType>(constraintColonPosition, Position::missing());
                     names.push_back(node);

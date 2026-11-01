@@ -703,7 +703,7 @@ struct TypeStringifier
         }
 
         // We should not be respecting opts.hideNamedFunctionTypeParameters here.
-        if (ftv.generics.size() > 0 || ftv.genericPacks.size() > 0)
+        if (ftv.generics.size() > 0 || ftv.genericPacks.size() > 0 || (FFlag::LuauGenericConstraintsSupport && ftv.inhabitanceClauses.size() > 0))
         {
             state.emit("<");
             bool comma = false;
@@ -720,6 +720,32 @@ struct TypeStringifier
                     state.emit(", ");
                 comma = true;
                 stringify(*it);
+            }
+            if (FFlag::LuauGenericConstraintsSupport && !ftv.inhabitanceClauses.empty())
+            {
+                comma = false;
+                state.emit(" ");
+
+                for (const GenericInhabitanceClause& ic : ftv.inhabitanceClauses)
+                {
+                    if (comma)
+                        state.emit(", ");
+                    comma = true;
+                    state.emit("with ");
+                    state.emit(ic.typeFunction.value);
+                    state.emit("<");
+
+                    bool argumentComma = false;
+                    for (TypeId argument : ic.arguments)
+                    {
+                        if (argumentComma)
+                            state.emit(", ");
+                        argumentComma = true;
+                        stringify(argument);
+                    }
+
+                    state.emit(">");
+                }
             }
             state.emit(">");
         }

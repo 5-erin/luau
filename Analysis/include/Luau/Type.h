@@ -118,13 +118,13 @@ struct GenericType
     explicit GenericType(TypeLevel level);
     explicit GenericType(const Name& name, Polarity polarity);
     explicit GenericType(Scope* scope, Polarity polarity);
-    explicit GenericType(Scope* scope, std::optional<TypeId> constraint, std::optional<GenericInhabitanceClause> inhabitanceClause, Polarity polarity);
+    explicit GenericType(Scope* scope, std::optional<TypeId> constraint, Polarity polarity);
 
     GenericType(TypeLevel level, const Name& name);
     GenericType(Scope* scope, const Name& name);
 
     GenericType(Scope* scope, Name name, Polarity polarity);
-    GenericType(Scope* scope, Name name, std::optional<TypeId> constraint, std::optional<GenericInhabitanceClause> inhabitanceClause, Polarity polarity);
+    GenericType(Scope* scope, Name name, std::optional<TypeId> constraint, Polarity polarity);
 
     int index;
     TypeLevel level;
@@ -132,7 +132,6 @@ struct GenericType
     Name name;
     bool explicitName = false;
     std::optional<TypeId> constraint;
-    std::optional<GenericInhabitanceClause> inhabitanceClause;
 
     Polarity polarity = Polarity::Unknown;
 };

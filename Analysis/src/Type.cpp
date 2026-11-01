@@ -541,11 +541,10 @@ GenericType::GenericType(Scope* scope, Polarity polarity)
 {
 }
 
-GenericType::GenericType(Scope* scope, std::optional<TypeId> constraint, std::optional<GenericInhabitanceClause> inhabitanceClause, Polarity polarity)
+GenericType::GenericType(Scope* scope, std::optional<TypeId> constraint, Polarity polarity)
     : index(Unifiable::freshIndex())
     , scope(scope)
     , constraint(constraint)
-    , inhabitanceClause(inhabitanceClause)
     , polarity(polarity)
 {
 }
@@ -575,13 +574,12 @@ GenericType::GenericType(Scope* scope, Name name, Polarity polarity)
 {
 }
 
-GenericType::GenericType(Scope* scope, Name name, std::optional<TypeId> constraint, std::optional<GenericInhabitanceClause> inhabitanceClause, Polarity polarity)
+GenericType::GenericType(Scope* scope, Name name, std::optional<TypeId> constraint, Polarity polarity)
     : index(Unifiable::freshIndex())
     , scope(scope)
     , name(std::move(name))
     , explicitName(true)
     , constraint(constraint)
-    , inhabitanceClause(inhabitanceClause)
     , polarity(polarity)
 {
 }

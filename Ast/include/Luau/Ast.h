@@ -293,7 +293,6 @@ public:
         const Location& location,
         AstName name,
         AstType* constraint = nullptr,
-        std::optional<AstGenericInhabitanceClause> inhabitanceClause = std::nullopt,
         AstType* defaultValue = nullptr
     );
 
@@ -302,7 +301,6 @@ public:
 
     AstName name;
     AstType* constraint = nullptr;
-    std::optional<AstGenericInhabitanceClause> inhabitanceClause;
     AstType* defaultValue = nullptr;
 };
 

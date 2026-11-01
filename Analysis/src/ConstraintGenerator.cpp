@@ -4353,6 +4353,7 @@ ConstraintGenerator::FunctionSignature ConstraintGenerator::checkFunctionSignatu
     TypePackId returnType = nullptr;
 
     std::vector<TypeId> genericTypes;
+    std::vector<GenericInhabitanceClause> inhabitanceClauses;
     std::vector<TypePackId> genericTypePacks;
 
     if (expectedType)
@@ -4389,6 +4390,21 @@ ConstraintGenerator::FunctionSignature ConstraintGenerator::checkFunctionSignatu
         // Local variable works around an odd gcc 11.3 warning: <anonymous> may be used uninitialized
         std::optional<TypeId> none = std::nullopt;
         expectedType = none;
+    }
+
+    if (FFlag::LuauGenericConstraintsSupport && fn->inhabitanceClauses.size > 0)
+    {
+        inhabitanceClauses.reserve(fn->inhabitanceClauses.size);
+
+        for (const AstGenericInhabitanceClause& ic : fn->inhabitanceClauses)
+        {
+            std::vector<TypeId> arguments(ic.arguments.size);
+
+            for (size_t index = 0; index < arguments.size(); index++)
+                arguments[index] = resolveType(signatureScope, ic.arguments.data[index], false);
+
+            inhabitanceClauses.push_back(GenericInhabitanceClause{ic.typeFunction, arguments});
+        }
     }
 
     std::vector<TypeId> argTypes;
@@ -4590,6 +4606,7 @@ ConstraintGenerator::FunctionSignature ConstraintGenerator::checkFunctionSignatu
 
     FunctionType actualFunction{TypeLevel{}, arena->addTypePack(std::move(argTypes), varargPack), returnType};
     actualFunction.generics = std::move(genericTypes);
+    actualFunction.inhabitanceClauses = std::move(inhabitanceClauses);
     actualFunction.genericPacks = std::move(genericTypePacks);
     actualFunction.argNames = std::move(argNames);
     actualFunction.hasSelf = FFlag::DebugLuauUserDefinedClasses ? hasSelf : fn->self != nullptr;
@@ -4908,6 +4925,7 @@ TypeId ConstraintGenerator::resolveFunctionType(
     ScopePtr signatureScope = nullptr;
 
     std::vector<TypeId> genericTypes;
+    std::vector<GenericInhabitanceClause> inhabitanceClauses;
     std::vector<TypePackId> genericTypePacks;
 
     // If we don't have generics, we do not need to generate a child scope
@@ -4935,6 +4953,21 @@ TypeId ConstraintGenerator::resolveFunctionType(
         // the signature scope is the parent scope if we don't have
         // generics.
         signatureScope = scope;
+    }
+
+    if (FFlag::LuauGenericConstraintsSupport && fn->inhabitanceClauses.size > 0)
+    {
+        inhabitanceClauses.reserve(fn->inhabitanceClauses.size);
+
+        for (const AstGenericInhabitanceClause& ic : fn->inhabitanceClauses)
+        {
+            std::vector<TypeId> arguments(ic.arguments.size);
+
+            for (size_t index = 0; index < arguments.size(); index++)
+                arguments[index] = resolveType(signatureScope, ic.arguments.data[index], false);
+
+            inhabitanceClauses.push_back(GenericInhabitanceClause{ic.typeFunction, arguments});
+        }
     }
 
     AstTypePackExplicit tempArgTypes{Location{}, fn->argTypes};
@@ -5202,16 +5235,6 @@ std::vector<std::pair<Name, GenericTypeDefinition>> ConstraintGenerator::createG
 
             if (gen->constraint)
                 gtv->constraint = resolveType(scope, gen->constraint, false);
-
-            if (gen->inhabitanceClause)
-            {
-                std::vector<TypeId> arguments(gen->inhabitanceClause->arguments.size);
-
-                for (size_t index = 0; index < arguments.size(); index++)
-                    arguments[index] = resolveType(scope, gen->inhabitanceClause->arguments.data[index], false);
-
-                gtv->inhabitanceClause = {gen->inhabitanceClause->typeFunction, arguments};
-            }
         }
     }
 
