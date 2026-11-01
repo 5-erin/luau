@@ -681,7 +681,7 @@ FunctionType::FunctionType(
 FunctionType::FunctionType(
     TypeLevel level,
     std::vector<TypeId> generics,
-    std::vector<GenericInhabitanceClause> inhabitanceClauses,
+    std::vector<TypeId> inhabitanceConstraints,
     std::vector<TypePackId> genericPacks,
     TypePackId argTypes,
     TypePackId retTypes,
@@ -690,7 +690,7 @@ FunctionType::FunctionType(
 )
     : definition(std::move(defn))
     , generics(std::move(generics))
-    , inhabitanceClauses(std::move(inhabitanceClauses))
+    , inhabitanceConstraints(std::move(inhabitanceConstraints))
     , genericPacks(std::move(genericPacks))
     , level(level)
     , argTypes(argTypes)

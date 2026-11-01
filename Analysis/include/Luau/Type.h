@@ -104,12 +104,6 @@ struct FreeType
     std::optional<TypeId> primitiveType;
 };
 
-struct GenericInhabitanceClause
-{
-    AstName typeFunction;
-    std::vector<TypeId> arguments;
-};
-
 struct GenericType
 {
     // By default, generics are global, with a synthetic name
@@ -393,7 +387,7 @@ struct FunctionType
     FunctionType(
         TypeLevel level,
         std::vector<TypeId> generics,
-        std::vector<GenericInhabitanceClause> inhabitanceClauses,
+        std::vector<TypeId> inhabitanceConstraints,
         std::vector<TypePackId> genericPacks,
         TypePackId argTypes,
         TypePackId retTypes,
@@ -404,7 +398,7 @@ struct FunctionType
     std::optional<FunctionDefinition> definition;
     /// These should all be generic
     std::vector<TypeId> generics;
-    std::vector<GenericInhabitanceClause> inhabitanceClauses;
+    std::vector<TypeId> inhabitanceConstraints;
     std::vector<TypePackId> genericPacks;
     std::vector<std::optional<FunctionArgument>> argNames;
     Tags tags;

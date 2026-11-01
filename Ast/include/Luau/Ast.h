@@ -277,13 +277,6 @@ public:
     bool hasSemicolon;
 };
 
-// `with F<T, U>`
-struct AstGenericInhabitanceClause
-{
-    AstName typeFunction;
-    AstArray<AstType*> arguments;
-};
-
 class AstGenericType : public AstNode
 {
 public:
@@ -554,7 +547,7 @@ public:
         const Location& location,
         const AstArray<AstAttr*>& attributes,
         const AstArray<AstGenericType*>& generics,
-        const AstArray<AstGenericInhabitanceClause>& inhabitanceClauses,
+        const AstArray<AstType*>& inhabitanceConstraints,
         const AstArray<AstGenericTypePack*>& genericPacks,
         AstLocal* self,
         const AstArray<AstLocal*>& args,
@@ -576,7 +569,7 @@ public:
 
     AstArray<AstAttr*> attributes;
     AstArray<AstGenericType*> generics;
-    AstArray<AstGenericInhabitanceClause> inhabitanceClauses;
+    AstArray<AstType*> inhabitanceConstraints;
     AstArray<AstGenericTypePack*> genericPacks;
     AstLocal* self;
     AstArray<AstLocal*> args;
@@ -1140,7 +1133,6 @@ public:
         const AstName& name,
         const Location& nameLocation,
         const AstArray<AstGenericType*>& generics,
-        const AstArray<AstGenericInhabitanceClause> inhabitanceClauses,
         const AstArray<AstGenericTypePack*>& genericPacks,
         const AstTypeList& params,
         const AstArray<AstArgumentName>& paramNames,
@@ -1155,7 +1147,6 @@ public:
         const AstName& name,
         const Location& nameLocation,
         const AstArray<AstGenericType*>& generics,
-        const AstArray<AstGenericInhabitanceClause> inhabitanceClauses,
         const AstArray<AstGenericTypePack*>& genericPacks,
         const AstTypeList& params,
         const AstArray<AstArgumentName>& paramNames,
@@ -1174,7 +1165,6 @@ public:
     AstName name;
     Location nameLocation;
     AstArray<AstGenericType*> generics;
-    AstArray<AstGenericInhabitanceClause> inhabitanceClauses;
     AstArray<AstGenericTypePack*> genericPacks;
     AstTypeList params;
     AstArray<AstArgumentName> paramNames;
@@ -1349,7 +1339,7 @@ public:
     AstTypeFunction(
         const Location& location,
         const AstArray<AstGenericType*>& generics,
-        const AstArray<AstGenericInhabitanceClause>& inhabitanceClauses,
+        const AstArray<AstType*>& inhabitanceConstraints,
         const AstArray<AstGenericTypePack*>& genericPacks,
         const AstTypeList& argTypes,
         const AstArray<std::optional<AstArgumentName>>& argNames,
@@ -1360,7 +1350,7 @@ public:
         const Location& location,
         const AstArray<AstAttr*>& attributes,
         const AstArray<AstGenericType*>& generics,
-        const AstArray<AstGenericInhabitanceClause>& inhabitanceClauses,
+        const AstArray<AstType*>& inhabitanceConstraints,
         const AstArray<AstGenericTypePack*>& genericPacks,
         const AstTypeList& argTypes,
         const AstArray<std::optional<AstArgumentName>>& argNames,
@@ -1375,7 +1365,7 @@ public:
 
     AstArray<AstAttr*> attributes;
     AstArray<AstGenericType*> generics;
-    AstArray<AstGenericInhabitanceClause> inhabitanceClauses;
+    AstArray<AstType*> inhabitanceConstraints;
     AstArray<AstGenericTypePack*> genericPacks;
     AstTypeList argTypes;
     AstArray<std::optional<AstArgumentName>> argNames;

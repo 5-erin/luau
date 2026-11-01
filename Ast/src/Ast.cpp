@@ -344,7 +344,7 @@ AstExprFunction::AstExprFunction(
     const Location& location,
     const AstArray<AstAttr*>& attributes,
     const AstArray<AstGenericType*>& generics,
-    const AstArray<AstGenericInhabitanceClause>& inhabitanceClauses,
+    const AstArray<AstType*>& inhabitanceConstraints,
     const AstArray<AstGenericTypePack*>& genericPacks,
     AstLocal* self,
     const AstArray<AstLocal*>& args,
@@ -360,7 +360,7 @@ AstExprFunction::AstExprFunction(
     : AstExpr(ClassIndex(), location)
     , attributes(attributes)
     , generics(generics)
-    , inhabitanceClauses(inhabitanceClauses)
+    , inhabitanceConstraints(inhabitanceConstraints)
     , genericPacks(genericPacks)
     , self(self)
     , args(args)
@@ -1082,7 +1082,6 @@ AstStatDeclareFunction::AstStatDeclareFunction(
     const AstName& name,
     const Location& nameLocation,
     const AstArray<AstGenericType*>& generics,
-    const AstArray<AstGenericInhabitanceClause> inhabitanceClauses,
     const AstArray<AstGenericTypePack*>& genericPacks,
     const AstTypeList& params,
     const AstArray<AstArgumentName>& paramNames,
@@ -1095,7 +1094,6 @@ AstStatDeclareFunction::AstStatDeclareFunction(
     , name(name)
     , nameLocation(nameLocation)
     , generics(generics)
-    , inhabitanceClauses(inhabitanceClauses)
     , genericPacks(genericPacks)
     , params(params)
     , paramNames(paramNames)
@@ -1150,7 +1148,6 @@ AstStatDeclareFunction::AstStatDeclareFunction(
     const AstName& name,
     const Location& nameLocation,
     const AstArray<AstGenericType*>& generics,
-    const AstArray<AstGenericInhabitanceClause> inhabitanceClauses,
     const AstArray<AstGenericTypePack*>& genericPacks,
     const AstTypeList& params,
     const AstArray<AstArgumentName>& paramNames,
@@ -1163,7 +1160,6 @@ AstStatDeclareFunction::AstStatDeclareFunction(
     , name(name)
     , nameLocation(nameLocation)
     , generics(generics)
-    , inhabitanceClauses(inhabitanceClauses)
     , genericPacks(genericPacks)
     , params(params)
     , paramNames(paramNames)
@@ -1307,7 +1303,7 @@ void AstTypeTable::visit(AstVisitor* visitor)
 AstTypeFunction::AstTypeFunction(
     const Location& location,
     const AstArray<AstGenericType*>& generics,
-    const AstArray<AstGenericInhabitanceClause>& inhabitanceClauses,
+    const AstArray<AstType*>& inhabitanceConstraints,
     const AstArray<AstGenericTypePack*>& genericPacks,
     const AstTypeList& argTypes,
     const AstArray<std::optional<AstArgumentName>>& argNames,
@@ -1316,7 +1312,7 @@ AstTypeFunction::AstTypeFunction(
     : AstType(ClassIndex(), location)
     , attributes()
     , generics(generics)
-    , inhabitanceClauses(inhabitanceClauses)
+    , inhabitanceConstraints(inhabitanceConstraints)
     , genericPacks(genericPacks)
     , argTypes(argTypes)
     , argNames(argNames)
@@ -1329,7 +1325,7 @@ AstTypeFunction::AstTypeFunction(
     const Location& location,
     const AstArray<AstAttr*>& attributes,
     const AstArray<AstGenericType*>& generics,
-    const AstArray<AstGenericInhabitanceClause>& inhabitanceClauses,
+    const AstArray<AstType*>& inhabitanceConstraints,
     const AstArray<AstGenericTypePack*>& genericPacks,
     const AstTypeList& argTypes,
     const AstArray<std::optional<AstArgumentName>>& argNames,
@@ -1338,7 +1334,7 @@ AstTypeFunction::AstTypeFunction(
     : AstType(ClassIndex(), location)
     , attributes(attributes)
     , generics(generics)
-    , inhabitanceClauses(inhabitanceClauses)
+    , inhabitanceConstraints(inhabitanceConstraints)
     , genericPacks(genericPacks)
     , argTypes(argTypes)
     , argNames(argNames)

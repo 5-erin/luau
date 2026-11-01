@@ -305,7 +305,7 @@ private:
         const Lexeme& begin,
         const AstArray<AstAttr*>& attributes,
         AstArray<AstGenericType*> generics,
-        AstArray<AstGenericInhabitanceClause> inhabitanceClauses,
+        AstArray<AstType*> inhabitanceConstraints,
         AstArray<AstGenericTypePack*> genericPacks,
         AstArray<AstType*> params,
         AstArray<std::optional<AstArgumentName>> paramNames,
@@ -394,13 +394,13 @@ private:
     Name parseName(const char* context = nullptr);
     Name parseIndexName(const char* context, const Position& previous);
 
-    // `with` `<` [TypeList] `>`
-    std::optional<AstGenericInhabitanceClause> tryParseGenericInhabitanceClauseInner();
+    // `with` TypeList `>`
+    void parseInhabitanceConstraintsClause(TempVector<AstType*>& constraints);
 
     struct GenericTypeList
     {
         AstArray<AstGenericType*> generics;
-        AstArray<AstGenericInhabitanceClause> inhabitanceClauses;
+        AstArray<AstType*> inhabitanceConstraints;
         AstArray<AstGenericTypePack*> genericPacks;
     };
 
@@ -611,7 +611,7 @@ private:
     std::vector<CstExprTable::Item> scratchCstItem;
     std::vector<AstArgumentName> scratchArgName;
     std::vector<AstGenericType*> scratchGenericTypes;
-    std::vector<AstGenericInhabitanceClause> scratchInhabitanceClauses;
+    std::vector<AstType*> scratchInhabitanceConstraints;
     std::vector<AstGenericTypePack*> scratchGenericTypePacks;
     std::vector<std::optional<AstArgumentName>> scratchOptArgName;
     std::vector<Position> scratchPosition;
