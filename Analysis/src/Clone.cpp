@@ -13,6 +13,7 @@
 
 // For each `Luau::clone` call, we will clone only up to N amount of types _and_ packs, as controlled by this limit.
 LUAU_FASTINTVARIABLE(LuauTypeCloneIterationLimit, 100'000)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 namespace Luau
 {
@@ -309,6 +310,12 @@ private:
 
         for (TypePackId& gp : t->genericPacks)
             gp = shallowClone(gp);
+
+        if (FFlag::LuauGenericConstraintsSupport)
+        {
+            for (TypeId& c : t->inhabitanceConstraints)
+                c = shallowClone(c);
+        }
 
         t->argTypes = shallowClone(t->argTypes);
         t->retTypes = shallowClone(t->retTypes);
