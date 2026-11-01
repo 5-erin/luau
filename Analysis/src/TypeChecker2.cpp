@@ -2298,7 +2298,35 @@ void TypeChecker2::visitCall(AstExprCall* call)
                     }
                 );
 
-                checkForTypeFunctionInhabitance(instance, call->location);
+                TypeFunctionContext context{
+                    NotNull{module->internalTypes.get()},
+                    builtinTypes,
+                    scope,
+                    NotNull{&normalizer},
+                    typeFunctionRuntime,
+                    ice,
+                    limits,
+                    subtyping
+                };
+
+                ErrorVec errors = reduceTypeFunctions(
+                    instance,
+                    call->location,
+                    NotNull{&context},
+                    true,
+                    FFlag::LuauTypeFunctionsAbsenceCache ? &typeFunctionAbsenceCache : nullptr
+                ).errors;
+
+                if (!errors.empty())
+                {
+                    reportError(
+                        GenericError{
+                            "Constraint `" + toString(tfty) + "` on the function, which is `" + toString(instance) + "` at this call site,"
+                                " was violated: " + toString(errors[0])
+                        },
+                        call->location
+                    );
+                }
             }
         }
 
