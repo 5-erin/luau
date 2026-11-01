@@ -1863,9 +1863,18 @@ void pruneUnnecessaryGenerics(
                 break;
 
             case Polarity::Negative:
-                // If we've only seen this generic in a negative position, then we can clip it to `unknown`.
-                emplaceType<BoundType>(asMutable(generic), builtinTypes->unknownType);
-                it = functionTy->generics.erase(it);
+                if (!FFlag::LuauGenericConstraintsSupport || !FFlag::DebugLuauGenericSubtypeConstraintsInfer || !genericTy->constraint.has_value())
+                {
+                    // If we've only seen this generic in a negative position, then we can clip it to `unknown`.
+                    emplaceType<BoundType>(asMutable(generic), builtinTypes->unknownType);
+                    it = functionTy->generics.erase(it);
+                }
+                else
+                {
+                    genericTy->polarity = Polarity::Negative;
+                    seenTypes.insert(generic);
+                    it++;
+                }
                 break;
 
             case Polarity::Mixed:
