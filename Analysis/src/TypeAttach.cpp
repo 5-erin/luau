@@ -321,10 +321,17 @@ public:
                 generics.data[numGenerics++] = allocator->alloc<AstGenericType>(Location(), AstName(gtv->name.c_str()), nullptr);
         }
 
-        AstArray<AstGenericInhabitanceClause> inhabitanceClauses;
-        inhabitanceClauses.size = 0;
-        inhabitanceClauses.data = nullptr;
-        // TODO
+        AstArray<AstType*> inhabitanceConstraints;
+        inhabitanceConstraints.size = 0;
+        inhabitanceConstraints.data = nullptr;
+        // TODO: Fails to compile.
+        /*
+        inhabitanceConstraints.size = ftv.inhabitanceConstraints.size();
+        inhabitanceConstraints.data = static_cast<AstType**>(allocator->allocate(sizeof(AstType) * inhabitanceConstraints.size));
+        size_t numConstraints = 0;
+        for (TypeId constraint : ftv.inhabitanceConstraints)
+            inhabitanceConstraints.data[numConstraints++] = allocator->alloc<AstType>(Location(), Luau::visit(*this, constraint->ty), nullptr);
+        */
 
         AstArray<AstGenericTypePack*> genericPacks;
         genericPacks.size = ftv.genericPacks.size();
@@ -382,7 +389,7 @@ public:
 
         auto returnAnnotation = allocator->alloc<AstTypePackExplicit>(Location(), AstTypeList{returnTypes, retTailAnnotation});
         return allocator->alloc<AstTypeFunction>(
-            Location(), generics, inhabitanceClauses, genericPacks, AstTypeList{argTypes, argTailAnnotation}, argNames, returnAnnotation
+            Location(), generics, inhabitanceConstraints, genericPacks, AstTypeList{argTypes, argTailAnnotation}, argNames, returnAnnotation
         );
     }
     AstType* operator()(const ErrorType&)

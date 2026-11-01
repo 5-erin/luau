@@ -2244,7 +2244,7 @@ void TypeChecker2::visitCall(AstExprCall* call)
         const FunctionType* ftv = get<FunctionType>(follow(*originalCallTy));
         LUAU_ASSERT(ftv);
 
-        if (!ftv->inhabitanceClauses.empty())
+        if (!ftv->inhabitanceConstraints.empty())
         {
             std::shared_ptr<TypeArena> arena = module->internalTypes;
 
@@ -2261,47 +2261,41 @@ void TypeChecker2::visitCall(AstExprCall* call)
             for (TypePackId freeTp : u2.newFreshTypePacks)
                 trackInteriorFreeTypePack(scope, freeTp);
 
-            for (const GenericInhabitanceClause& clause : ftv->inhabitanceClauses)
+            for (TypeId tfty : ftv->inhabitanceConstraints)
             {
-                std::vector<TypeId> arguments(clause.arguments.size());
+                const TypeFunctionInstanceType* tfit = get<TypeFunctionInstanceType>(follow(tfty));
+                LUAU_ASSERT(tfit);
 
-                for (const auto& [ gen, substitution ] : u2.genericSubstitutions)
+                std::vector<TypeId> arguments(tfit->typeArguments.size());
+
+                for (size_t index = 0; index < arguments.size(); index++)
                 {
-                    for (size_t index = 0; index < arguments.size(); index++)
-                    {
-                        TypeId expected = clause.arguments[index];
+                    TypeId expected = tfit->typeArguments[index];
 
+                    for (const auto& [ gen, substitution ] : u2.genericSubstitutions)
+                    {
                         // TODO: This is shallow! Consider `<T with F<{T}>>(T) -> T`
                         if (gen == expected)
-                            arguments[index] = get<FreeType>(substitution)->lowerBound;
-                        else
-                            arguments[index] = expected;
-                    }
-                }
-
-                std::optional<TypeFun> tf = stack.back()->lookupType(clause.typeFunction.value);
-
-                if (tf)
-                {
-                    const TypeFunctionInstanceType* tfit = get<TypeFunctionInstanceType>(follow(tf->type));
-                    LUAU_ASSERT(tfit);
-
-                    TypeId instance = arena->addType(
-                        TypeFunctionInstanceType{
-                            tfit->function,
-                            arguments,
-                            {},
-                            tfit->userFuncName,
-                            tfit->userFuncData,
+                        {
+                            expected = get<FreeType>(substitution)->lowerBound;
+                            break;
                         }
-                    );
+                    }
 
-                    checkForTypeFunctionInhabitance(instance, call->location);
+                    arguments[index] = expected;
                 }
-                else
-                {
-                    reportError(UnknownSymbol{clause.typeFunction.value, UnknownSymbol::Context::Type}, call->location);
-                }
+
+                TypeId instance = arena->addType(
+                    TypeFunctionInstanceType{
+                        tfit->function,
+                        arguments,
+                        {},
+                        tfit->userFuncName,
+                        tfit->userFuncData,
+                    }
+                );
+
+                checkForTypeFunctionInhabitance(instance, call->location);
             }
         }
 
