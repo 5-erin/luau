@@ -4623,6 +4623,9 @@ ConstraintGenerator::FunctionSignature ConstraintGenerator::checkFunctionSignatu
     else
         scopeToFunction[signatureScope.get()] = actualFunctionType;
 
+    if (FFlag::LuauGenericConstraintsSupport)
+        bodyScope->functionType = actualFunctionType;
+
     return {
         /* signature */ actualFunctionType,
         /* signatureScope */ std::move(signatureScope),

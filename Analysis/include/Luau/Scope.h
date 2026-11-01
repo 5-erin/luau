@@ -40,6 +40,7 @@ struct Scope
     // All the children of this scope.
     std::vector<NotNull<Scope>> children;
     std::unordered_map<Symbol, Binding> bindings;
+    std::optional<TypeId> functionType;
     TypePackId returnType = nullptr;
     std::optional<TypePackId> varargPack;
 

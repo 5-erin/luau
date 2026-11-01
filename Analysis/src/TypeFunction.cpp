@@ -34,6 +34,7 @@ LUAU_DYNAMIC_FASTINTVARIABLE(LuauTypeFamilyUseGuesserDepth, -1);
 
 LUAU_FASTFLAGVARIABLE(DebugLuauLogTypeFamilies)
 LUAU_FASTFLAGVARIABLE(LuauTypeFunctionsAbsenceCache)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 namespace Luau
 {
@@ -519,7 +520,15 @@ struct TypeFunctionReducer
                 irreducible.insert(subject);
 
                 if (skip == SkipTestResult::Generic)
+                {
                     setState(subject, TypeFunctionInstanceState::Solved);
+
+                    if (FFlag::LuauGenericConstraintsSupport)
+                    {
+                        // Let the caller know this type will not become reducible
+                        result.irreducibleTypes.insert((TypeId)subject);
+                    }
+                }
 
                 return false;
             }

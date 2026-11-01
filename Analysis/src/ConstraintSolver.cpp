@@ -51,6 +51,7 @@ LUAU_FASTFLAG(LuauReferenceCountInitializerIsIterative)
 LUAU_FASTFLAG(LuauDecomposeIntersectionOfFreeType)
 LUAU_FASTFLAGVARIABLE(LuauNonreentrantLookupTableProp)
 LUAU_FASTFLAG(LuauOneBitAssumedConstraintTracking)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 namespace Luau
 {
@@ -2702,6 +2703,30 @@ bool ConstraintSolver::tryDispatch(const UnpackConstraint& c, NotNull<const Cons
     return true;
 }
 
+template<typename T>
+bool areEquivalent(const T& a, const T& b)
+{
+    if (a.function != b.function)
+        return false;
+
+    if (a.typeArguments.size() != b.typeArguments.size() || a.packArguments.size() != b.packArguments.size())
+        return false;
+
+    for (size_t i = 0; i < a.typeArguments.size(); ++i)
+    {
+        if (follow(a.typeArguments[i]) != follow(b.typeArguments[i]))
+            return false;
+    }
+
+    for (size_t i = 0; i < a.packArguments.size(); ++i)
+    {
+        if (follow(a.packArguments[i]) != follow(b.packArguments[i]))
+            return false;
+    }
+
+    return true;
+}
+
 bool ConstraintSolver::tryDispatch(const ReduceConstraint& c, NotNull<const Constraint> constraint, bool force)
 {
     TypeId ty = follow(c.ty);
@@ -2721,6 +2746,37 @@ bool ConstraintSolver::tryDispatch(const ReduceConstraint& c, NotNull<const Cons
     }
 
     bool reductionFinished = result.blockedTypes.empty() && result.blockedPacks.empty();
+
+    if (FFlag::LuauGenericConstraintsSupport && reductionFinished && !result.irreducibleTypes.empty())
+    {
+        NotNull<Scope> body = constraint->scope;
+        while (!body->functionType && body->parent)
+            body = NotNull{&*body->parent};
+
+        if (body->functionType)
+        {
+            FunctionType* fnTy = getMutable<FunctionType>(body->functionType);
+
+            for (TypeId stuck : result.irreducibleTypes)
+            {
+                const TypeFunctionInstanceType& stuckFn = *get<TypeFunctionInstanceType>(stuck);
+                bool alreadyHaveIt = false;
+
+                for (TypeId previous : fnTy->inhabitanceConstraints)
+                {
+                    const TypeFunctionInstanceType& previousFn = *get<TypeFunctionInstanceType>(previous);
+                    if (areEquivalent(stuckFn, previousFn))
+                    {
+                        alreadyHaveIt = true;
+                        break;
+                    }
+                }
+
+                if (!alreadyHaveIt)
+                    fnTy->inhabitanceConstraints.push_back(stuck);
+            }
+        }
+    }
 
     ty = follow(ty);
 

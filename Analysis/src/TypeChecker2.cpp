@@ -520,6 +520,9 @@ std::optional<StackPusher> TypeChecker2::pushStack(AstNode* node)
 
 void TypeChecker2::checkForInternalTypeFunction(TypeId ty, Location location)
 {
+    if (FFlag::LuauGenericConstraintsSupport)
+        return; // These will be inferred as part of the `with`/inhabitance constraint clause
+
     InternalTypeFunctionFinder finder(functionDeclStack);
     finder.traverse(ty);
 
