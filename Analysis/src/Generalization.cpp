@@ -1288,31 +1288,52 @@ GeneralizationResult<TypeId> generalizeType(
 
     if (FFlag::LuauGenericConstraintsSupport)
     {
+        removeType(arena, builtinTypes, follow(ft->upperBound), freeTy);
+        removeType(arena, builtinTypes, follow(ft->lowerBound), freeTy);
+
+        TypeId upperBound = follow(ft->upperBound);
+        TypeId lowerBound = follow(ft->lowerBound);
+
+        if (upperBound == freeTy)
+            upperBound = builtinTypes->unknownType;
+        if (lowerBound == freeTy)
+            lowerBound = builtinTypes->neverType;
+
         switch (params.polarity)
         {
         case Polarity::Positive:
             // TODO VERY STRANGE
-            if (!get<UnknownType>(follow(ft->upperBound)) && get<NeverType>(follow(ft->lowerBound)))
-                emplaceType<BoundType>(asMutable(freeTy), follow(ft->upperBound));
+            if (!get<UnknownType>(upperBound) && get<NeverType>(lowerBound))
+                emplaceType<BoundType>(asMutable(freeTy), upperBound);
             else
-                emplaceType<BoundType>(asMutable(freeTy), follow(ft->lowerBound));
+                emplaceType<BoundType>(asMutable(freeTy), lowerBound);
             break;
 
         case Polarity::Negative:
             // TODO: This is indicative of weird things going on, only the `else` branch makes sense.
-            if (get<UnknownType>(follow(ft->upperBound)))
-            {
-                emplaceType<GenericType>(asMutable(freeTy), scope, follow(ft->upperBound), params.polarity);
-                return {freeTy, /* wasReplacedByGeneric */ true};
-            }
-            else
-                emplaceType<BoundType>(asMutable(freeTy), follow(ft->upperBound));
+            //if (get<UnknownType>(upperBound))
+            //{
+            //    emplaceType<GenericType>(asMutable(freeTy), scope, upperBound, params.polarity);
+            //    return {freeTy, /* wasReplacedByGeneric */ true};
+            //}
+            //else
+                emplaceType<BoundType>(asMutable(freeTy), upperBound);
 
             break;
 
         case Polarity::Mixed:
-            emplaceType<GenericType>(asMutable(freeTy), scope, follow(ft->upperBound), params.polarity);
-            return {freeTy, /* wasReplacedByGeneric */ true};
+            if (!params.foundOutsideFunctions)
+            {
+                // Mixed + Inside Function = Generic
+                emplaceType<GenericType>(asMutable(freeTy), scope, upperBound, params.polarity);
+                return {freeTy, /* wasReplacedByGeneric */ true};
+            }
+            else
+            {
+                emplaceType<BoundType>(asMutable(freeTy), upperBound);
+            }
+
+            break;
 
         default:
             break;

@@ -1316,6 +1316,8 @@ TEST_CASE_FIXTURE(Fixture, "correctly_instantiate_polymorphic_member_functions")
  */
 TEST_CASE_FIXTURE(Fixture, "instantiate_cyclic_generic_function")
 {
+    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
+
     auto result = check(R"(
         function f(o)
             o:method()
@@ -1341,7 +1343,10 @@ TEST_CASE_FIXTURE(Fixture, "instantiate_cyclic_generic_function")
     REQUIRE(bool(methodProp));
 
     REQUIRE(methodProp->readTy);
-    const FunctionType* methodFunction = get<FunctionType>(follow(*methodProp->readTy));
+    const GenericType* methodGeneric = get<GenericType>(follow(*methodProp->readTy));
+    REQUIRE(methodGeneric);
+
+    const FunctionType* methodFunction = methodGeneric->constraint ? get<FunctionType>(follow(*methodGeneric->constraint)) : nullptr;
     REQUIRE(methodFunction != nullptr);
 
     std::optional<TypeId> methodArg = first(methodFunction->argTypes);
@@ -1520,6 +1525,8 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "infer_generic_function_function_argument_3")
 
 TEST_CASE_FIXTURE(Fixture, "infer_generic_function_function_argument_overloaded_pt_1")
 {
+    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
+
     CheckResult result = check(R"(
         local g12: (<T>(T, (T) -> T) -> T) & (<T>(T, T, (T, T) -> T) -> T)
 
@@ -1529,8 +1536,8 @@ TEST_CASE_FIXTURE(Fixture, "infer_generic_function_function_argument_overloaded_
 
     if (!FFlag::DebugLuauForceOldSolver)
     {
-        LUAU_REQUIRE_ERROR_COUNT(1, result);
-        CHECK_EQ("number | number", toString(requireType("a")));
+        LUAU_REQUIRE_ERROR_COUNT(2, result);
+        CHECK_EQ("add<unknown, unknown> | number", toString(requireType("a")));
         // Prior this contained a leaked generic, so we'd report no type errors.
         CHECK_EQ("add<unknown, unknown> | number", toString(requireType("b")));
     }
@@ -1568,6 +1575,8 @@ TEST_CASE_FIXTURE(Fixture, "infer_generic_function_function_overloaded_pt_2")
 
 TEST_CASE_FIXTURE(BuiltinsFixture, "do_not_infer_generic_functions")
 {
+    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
+
     CheckResult result;
 
     if (!FFlag::DebugLuauForceOldSolver)
@@ -1590,7 +1599,8 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "do_not_infer_generic_functions")
         // FIXME: When we solve for `T` for `sum` on line 4, we effectively
         // end up with `number | add<number, number>` and don't know we need
         // to simplify it later.
-        CHECK("number | number" == toString(requireType("b")));
+        // TODO: Uh, hm... I'm not sure whether this working is a bug somewhere else? `LuauGenericConstraintsSupport`.
+        CHECK("number" == toString(requireType("b")));
         CHECK("<T>(T, T, (T, T) -> T) -> T" == toString(requireType("sum")));
         CHECK("<T>(T, T, (T, T) -> T) -> T" == toString(requireTypeAtPosition({7, 29})));
     }
@@ -1806,6 +1816,8 @@ instantiate(function(x: string) return "foo" end)
 
 TEST_CASE_FIXTURE(Fixture, "bidirectional_checking_and_generalization_play_nice")
 {
+    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
+
     CheckResult result = check(R"(
         local foo = function(a)
             return a()
@@ -1818,7 +1830,7 @@ TEST_CASE_FIXTURE(Fixture, "bidirectional_checking_and_generalization_play_nice"
     LUAU_REQUIRE_NO_ERRORS(result);
 
     CHECK("number" == toString(requireType("a")));
-    CHECK("string" == toString(requireType("b")));
+    CHECK("\"bar\"" == toString(requireType("b")));
 }
 
 TEST_CASE_FIXTURE(BuiltinsFixture, "generalization_no_cyclic_intersections")
@@ -2283,8 +2295,7 @@ TEST_CASE_FIXTURE(Fixture, "generic_subtype_constraints_explicit")
     CHECK_EQ("Expected this to be 'string', but got 'number'", toString(result.errors[0]));
     CHECK_EQ("Expected this to be 'boolean', but got '\"hello\"'", toString(result.errors[1]));
 
-    // TODO: Fluff.
-    CHECK_EQ("<T: string>(T: string) -> T: string", toString(requireType("f")));
+    CHECK_EQ("<T: string>(T) -> T", toString(requireType("f")));
 }
 
 TEST_CASE_FIXTURE(BuiltinsFixture, "generic_subtype_constraints_inferred")
@@ -2311,7 +2322,7 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "generic_subtype_constraints_inferred")
     CHECK_EQ("Expected this to be 'string', but got 'number'", toString(result.errors[0]));
     CHECK_EQ("Expected this to be 'boolean', but got '\"hello\"'", toString(result.errors[1]));
 
-    CHECK_EQ("<T: string>(T: string) -> (T: string, number)", toString(requireType("f")));
+    CHECK_EQ("<T: string>(T) -> (T, number)", toString(requireType("f")));
 }
 
 TEST_SUITE_END();

@@ -15,6 +15,7 @@
 LUAU_FASTFLAG(LuauFixCallMetamethodErrorReporting)
 LUAU_FASTFLAG(LuauCallErrorReportingRecoversArgumentLocationsForPacks)
 LUAU_FASTFLAG(LuauOneBitAssumedConstraintTracking)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 namespace Luau
 {
@@ -551,6 +552,9 @@ void OverloadResolver::testFunction(
 )
 {
     fnTy = follow(fnTy);
+
+    if (const GenericType* gtv = get<GenericType>(fnTy); FFlag::LuauGenericConstraintsSupport && gtv && gtv->constraint)
+        fnTy = follow(*gtv->constraint);
 
     // TODO: This seems like the wrong spot to do this check.
     if (is<FreeType, BlockedType, PendingExpansionType>(fnTy))

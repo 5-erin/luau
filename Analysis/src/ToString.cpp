@@ -35,7 +35,8 @@ LUAU_FASTFLAG(LuauGenericConstraintsSupport)
  * 1: Prefix free/generic types with free- and gen-, respectively.
  *    Reveal hidden variadic tails.
  *    Display block count for local types.
- *    Display contents of pending expansion types
+ *    Display contents of pending expansion types.
+ *    Display upper bound/constraint of generics.
  *
  * 2: Suffix free/generic types with their scope depth.
  *
@@ -563,6 +564,16 @@ struct TypeStringifier
         }
         else
             state.emit(state.getName(ty));
+
+        if (FFlag::LuauGenericConstraintsSupport && FInt::DebugLuauVerboseTypeNames > 0 && gtv.constraint)
+        {
+            TypeId constraint = follow(*gtv.constraint);
+            if (!get<UnknownType>(constraint))
+            {
+                state.emit(": ");
+                stringify(constraint);
+            }
+        }
     }
 
     void operator()(TypeId ty, const GenericType& gtv)
