@@ -12,7 +12,6 @@ LUAU_FASTFLAG(DebugLuauForceOldSolver)
 LUAU_FASTFLAG(DebugLuauAssertOnForcedConstraint)
 LUAU_FASTFLAG(LuauGenericConstraintsSyntax)
 LUAU_FASTFLAG(LuauGenericConstraintsSupport)
-LUAU_FASTFLAG(DebugLuauGenericSubtypeConstraintsInfer)
 
 using namespace Luau;
 
@@ -2293,7 +2292,6 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "generic_subtype_constraints_inferred")
     DOES_NOT_PASS_OLD_SOLVER_GUARD();
     ScopedFastFlag genericConstraintsSyntax{FFlag::LuauGenericConstraintsSyntax, true};
     ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
-    ScopedFastFlag DebugLuauGenericSubtypeConstraintsInfer{FFlag::DebugLuauGenericSubtypeConstraintsInfer, true};
 
     CheckResult result = check(R"(
         local function f(x)

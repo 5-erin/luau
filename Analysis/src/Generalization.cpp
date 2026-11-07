@@ -23,7 +23,6 @@ LUAU_FASTFLAG(DebugLuauExactTableTypes)
 LUAU_FASTFLAGVARIABLE(LuauIterativeTypeSearcher)
 LUAU_FLAGVERSION(LuauIterativeTypeSearcher, 2)
 LUAU_FASTFLAG(LuauGenericConstraintsSupport)
-LUAU_FASTFLAGVARIABLE(DebugLuauGenericSubtypeConstraintsInfer)
 
 namespace Luau
 {
@@ -1285,8 +1284,30 @@ GeneralizationResult<TypeId> generalizeType(
 
     FreeType* ft = getMutable<FreeType>(freeTy);
     LUAU_ASSERT(ft);
-
     LUAU_ASSERT(isKnown(params.polarity));
+
+    if (FFlag::LuauGenericConstraintsSupport)
+    {
+        switch (params.polarity)
+        {
+        case Polarity::Positive:
+            emplaceType<BoundType>(asMutable(freeTy), follow(ft->lowerBound));
+            break;
+
+        case Polarity::Negative:
+            emplaceType<BoundType>(asMutable(freeTy), follow(ft->upperBound));
+            break;
+
+        case Polarity::Mixed:
+            emplaceType<GenericType>(asMutable(freeTy), scope, ft->upperBound, params.polarity);
+            return {freeTy, /* wasReplacedByGeneric */ true};
+
+        default:
+            break;
+        }
+
+        return {freeTy, /* wasReplacedByGeneric */ false};
+    }
 
     const bool hasLowerBound = !get<NeverType>(follow(ft->lowerBound));
     const bool hasUpperBound = !get<UnknownType>(follow(ft->upperBound));
@@ -1334,15 +1355,7 @@ GeneralizationResult<TypeId> generalizeType(
         removeType(arena, builtinTypes, ub, freeTy);
 
         if (follow(ub) != freeTy)
-        {
-            if (FFlag::LuauGenericConstraintsSupport && FFlag::DebugLuauGenericSubtypeConstraintsInfer && isWithinFunction)
-            {
-                emplaceType<GenericType>(asMutable(freeTy), scope, ub, params.polarity);
-                return {freeTy, /*wasReplacedByGeneric*/ true};
-            }
-            else
-                emplaceType<BoundType>(asMutable(freeTy), ub);
-        }
+            emplaceType<BoundType>(asMutable(freeTy), ub);
         else if (!isWithinFunction || params.useCount == 1)
         {
             // If we have some free type:
@@ -1864,8 +1877,7 @@ void pruneUnnecessaryGenerics(
 
             case Polarity::Negative:
                 // If we've only seen this generic in a negative position, then we can clip it to its upper bound.
-                // emplaceType<BoundType>(asMutable(generic), FFlag::LuauGenericConstraintsSupport ? genericTy->constraint.value_or(builtinTypes->unknownType) : builtinTypes->unknownType);
-                emplaceType<BoundType>(asMutable(generic), builtinTypes->unknownType);
+                emplaceType<BoundType>(asMutable(generic), genericTy->constraint ? *genericTy->constraint : builtinTypes->unknownType);
                 it = functionTy->generics.erase(it);
                 break;
 

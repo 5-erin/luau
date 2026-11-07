@@ -4767,6 +4767,11 @@ void Parser::parseInhabitanceConstraintsClause(TempVector<AstType*>& constraints
                 break;
             }
         }
+        else if (lexer.current().type != '>')
+        {
+            report(lexer.current().location, "Expected '>' or ','");
+            break;
+        }
     }
 }
 

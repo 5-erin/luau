@@ -2080,7 +2080,6 @@ void TypeChecker2::visitCall(AstExprCall* call)
 
     TypeId fnTy = follow(*originalCallTy);
 
-
     if (get<AnyType>(fnTy) || get<ErrorType>(fnTy) || get<NeverType>(fnTy))
         return;
     else if (isOptional(fnTy))
@@ -2264,9 +2263,8 @@ void TypeChecker2::visitCall(AstExprCall* call)
             reportError(AmbiguousFunctionCall{fnTy, argsPack}, call->location);
 
         const FunctionType* ftv = get<FunctionType>(follow(*originalCallTy));
-        LUAU_ASSERT(ftv);
 
-        if (!ftv->inhabitanceConstraints.empty())
+        if (ftv && !ftv->inhabitanceConstraints.empty())
         {
             std::shared_ptr<TypeArena> arena = module->internalTypes;
 

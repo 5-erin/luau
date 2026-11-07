@@ -553,11 +553,8 @@ struct TypeStringifier
         stringify(btv.boundTo);
     }
 
-    void operator()(TypeId ty, const GenericType& gtv)
+    void emitGenericName(TypeId ty, const GenericType& gtv)
     {
-        if (FInt::DebugLuauVerboseTypeNames >= 1)
-            state.emit("gen-");
-
         if (gtv.explicitName)
         {
             state.usedNames.insert(gtv.name);
@@ -566,12 +563,14 @@ struct TypeStringifier
         }
         else
             state.emit(state.getName(ty));
+    }
 
-        if (FFlag::LuauGenericConstraintsSupport && gtv.constraint)
-        {
-            state.emit(": ");
-            stringify(*gtv.constraint);
-        }
+    void operator()(TypeId ty, const GenericType& gtv)
+    {
+        if (FInt::DebugLuauVerboseTypeNames >= 1)
+            state.emit("gen-");
+
+        emitGenericName(ty, gtv);
 
         if (FInt::DebugLuauVerboseTypeNames >= 1)
             state.emit(gtv.polarity);
@@ -712,7 +711,17 @@ struct TypeStringifier
                 if (comma)
                     state.emit(", ");
                 comma = true;
-                stringify(*it);
+
+                const GenericType* gtv = get<GenericType>(*it);
+                LUAU_ASSERT(gtv);
+
+                emitGenericName(*it, *gtv);
+
+                if (FFlag::LuauGenericConstraintsSupport && gtv->constraint)
+                {
+                    state.emit(": ");
+                    stringify(*gtv->constraint);
+                }
             }
             for (auto it = ftv.genericPacks.begin(); it != ftv.genericPacks.end(); ++it)
             {
