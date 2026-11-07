@@ -287,6 +287,15 @@ struct GenericTypeVisitor
         {
             if (visit(ty, *ftv))
             {
+                if (FFlag::LuauGenericConstraintsSupport)
+                {
+                    for (const auto& gen : ftv->generics)
+                        traverse(gen);
+
+                    for (const auto& constraint : ftv->inhabitanceConstraints)
+                        traverse(constraint);
+                }
+
                 traverse(ftv->argTypes);
                 traverse(ftv->retTypes);
             }

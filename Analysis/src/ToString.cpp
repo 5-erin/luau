@@ -717,7 +717,7 @@ struct TypeStringifier
 
                 emitGenericName(*it, *gtv);
 
-                if (FFlag::LuauGenericConstraintsSupport && gtv->constraint)
+                if (FFlag::LuauGenericConstraintsSupport && gtv->constraint && !get<UnknownType>(follow(*gtv->constraint)))
                 {
                     state.emit(": ");
                     stringify(*gtv->constraint);
