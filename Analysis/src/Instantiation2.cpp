@@ -129,12 +129,12 @@ void resolveGenericSubstitutions(
         if (auto ft = get<FreeType>(ty))
             ty = pickBound(ft);
 
-        if (const GenericType* gen = get<GenericType>(genTy); FFlag::LuauGenericConstraintsSupport && gen && gen->constraint)
+        if (const GenericType* gen = get<GenericType>(genTy); FFlag::LuauGenericConstraintsSupport && gen && gen->upperBound)
         {
-            auto r = subtyping->isSubtype(ty, *gen->constraint, scope);
+            auto r = subtyping->isSubtype(ty, *gen->upperBound, scope);
             if (!r.isSubtype)
                 // This will give a better error message, and also a passable return type, compared to e.g. `never`.
-                genericSubstitutions[genTy] = *gen->constraint;
+                genericSubstitutions[genTy] = *gen->upperBound;
         }
     }
 

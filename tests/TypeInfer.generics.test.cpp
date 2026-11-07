@@ -1346,7 +1346,7 @@ TEST_CASE_FIXTURE(Fixture, "instantiate_cyclic_generic_function")
     const GenericType* methodGeneric = get<GenericType>(follow(*methodProp->readTy));
     REQUIRE(methodGeneric);
 
-    const FunctionType* methodFunction = methodGeneric->constraint ? get<FunctionType>(follow(*methodGeneric->constraint)) : nullptr;
+    const FunctionType* methodFunction = methodGeneric->upperBound ? get<FunctionType>(follow(*methodGeneric->upperBound)) : nullptr;
     REQUIRE(methodFunction != nullptr);
 
     std::optional<TypeId> methodArg = first(methodFunction->argTypes);

@@ -565,9 +565,9 @@ struct TypeStringifier
         else
             state.emit(state.getName(ty));
 
-        if (FFlag::LuauGenericConstraintsSupport && FInt::DebugLuauVerboseTypeNames > 0 && gtv.constraint)
+        if (FFlag::LuauGenericConstraintsSupport && FInt::DebugLuauVerboseTypeNames > 0 && gtv.upperBound)
         {
-            TypeId constraint = follow(*gtv.constraint);
+            TypeId constraint = follow(*gtv.upperBound);
             if (!get<UnknownType>(constraint))
             {
                 state.emit(": ");
@@ -728,10 +728,10 @@ struct TypeStringifier
 
                 emitGenericName(*it, *gtv);
 
-                if (FFlag::LuauGenericConstraintsSupport && gtv->constraint && !get<UnknownType>(follow(*gtv->constraint)))
+                if (FFlag::LuauGenericConstraintsSupport && gtv->upperBound && !get<UnknownType>(follow(*gtv->upperBound)))
                 {
                     state.emit(": ");
-                    stringify(*gtv->constraint);
+                    stringify(*gtv->upperBound);
                 }
             }
             for (auto it = ftv.genericPacks.begin(); it != ftv.genericPacks.end(); ++it)

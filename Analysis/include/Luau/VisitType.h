@@ -266,8 +266,8 @@ struct GenericTypeVisitor
         }
         else if (auto gtv = get<GenericType>(ty))
         {
-            if (visit(ty, *gtv) && FFlag::LuauGenericConstraintsSupport && gtv->constraint)
-                traverse(*gtv->constraint);
+            if (visit(ty, *gtv) && FFlag::LuauGenericConstraintsSupport && gtv->upperBound)
+                traverse(*gtv->upperBound);
         }
         else if (auto etv = get<ErrorType>(ty))
         {

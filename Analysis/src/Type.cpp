@@ -540,10 +540,10 @@ GenericType::GenericType(Scope* scope, Polarity polarity)
 {
 }
 
-GenericType::GenericType(Scope* scope, std::optional<TypeId> constraint, Polarity polarity)
+GenericType::GenericType(Scope* scope, std::optional<TypeId> upperBound, Polarity polarity)
     : index(Unifiable::freshIndex())
     , scope(scope)
-    , constraint(constraint)
+    , upperBound(upperBound)
     , polarity(polarity)
 {
 }
@@ -573,12 +573,12 @@ GenericType::GenericType(Scope* scope, Name name, Polarity polarity)
 {
 }
 
-GenericType::GenericType(Scope* scope, Name name, std::optional<TypeId> constraint, Polarity polarity)
+GenericType::GenericType(Scope* scope, Name name, std::optional<TypeId> upperBound, Polarity polarity)
     : index(Unifiable::freshIndex())
     , scope(scope)
     , name(std::move(name))
     , explicitName(true)
-    , constraint(constraint)
+    , upperBound(upperBound)
     , polarity(polarity)
 {
 }

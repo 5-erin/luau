@@ -5243,8 +5243,8 @@ std::vector<std::pair<Name, GenericTypeDefinition>> ConstraintGenerator::createG
             const AstGenericType* gen = generics.data[index];
             GenericType* gtv = getMutable<GenericType>(result[0].second.ty);
 
-            if (gen->constraint)
-                gtv->constraint = resolveType(scope, gen->constraint, false);
+            if (gen->upperBound)
+                gtv->upperBound = resolveType(scope, gen->upperBound, false);
         }
     }
 

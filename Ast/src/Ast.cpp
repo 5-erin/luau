@@ -96,10 +96,10 @@ AstAttr::DeprecatedInfo AstAttr::deprecatedInfo() const
 
 int gAstRttiIndex = 0;
 
-AstGenericType::AstGenericType(const Location& location, AstName name, AstType* constraint, AstType* defaultValue)
+AstGenericType::AstGenericType(const Location& location, AstName name, AstType* upperBound, AstType* defaultValue)
     : AstNode(ClassIndex(), location)
     , name(name)
-    , constraint(constraint)
+    , upperBound(upperBound)
     , defaultValue(defaultValue)
 {
 }

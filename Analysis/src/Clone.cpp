@@ -280,8 +280,8 @@ private:
 
     void cloneChildren(GenericType* t)
     {
-        if (FFlag::LuauGenericConstraintsSupport && t->constraint)
-            t->constraint = shallowClone(*t->constraint);
+        if (FFlag::LuauGenericConstraintsSupport && t->upperBound)
+            t->upperBound = shallowClone(*t->upperBound);
     }
 
     void cloneChildren(PrimitiveType* t)

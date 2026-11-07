@@ -1906,8 +1906,16 @@ void pruneUnnecessaryGenerics(
                 break;
 
             case Polarity::Negative:
-                // If we've only seen this generic in a negative position, then we can clip it to its upper bound.
-                emplaceType<BoundType>(asMutable(generic), genericTy->constraint ? *genericTy->constraint : builtinTypes->unknownType);
+                if (FFlag::LuauGenericConstraintsSupport)
+                {
+                    // If we've only seen this generic in a negative position, then we can clip it to its upper bound.
+                    emplaceType<BoundType>(asMutable(generic), genericTy->upperBound ? *genericTy->upperBound : builtinTypes->unknownType);
+                }
+                else
+                {
+                    // If we've only seen this generic in a negative position, then we can clip it to `unknown`.
+                    emplaceType<BoundType>(asMutable(generic), builtinTypes->unknownType);
+                }
                 it = functionTy->generics.erase(it);
                 break;
 
