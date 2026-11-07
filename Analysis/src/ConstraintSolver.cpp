@@ -2615,6 +2615,28 @@ bool areEquivalent(const T& a, const T& b)
     return true;
 }
 
+struct EquivalentTypeFunctionFinder : TypeOnceVisitor
+{
+    const TypeFunctionInstanceType* target = nullptr;
+    bool found = false;
+
+    explicit EquivalentTypeFunctionFinder(const TypeFunctionInstanceType* target)
+        : TypeOnceVisitor("EquivalentTypeFunctionFinder", /* skipBoundTypes */ true), target(target)
+    {
+    }
+
+    bool visit(TypeId ty, const TypeFunctionInstanceType& tfit)
+    {
+        if (areEquivalent(tfit, *target))
+        {
+            found = true;
+            return false;
+        }
+
+        return true;
+    }
+};
+
 bool ConstraintSolver::tryDispatch(const ReduceConstraint& c, NotNull<const Constraint> constraint, bool force)
 {
     TypeId ty = follow(c.ty);
@@ -2643,24 +2665,22 @@ bool ConstraintSolver::tryDispatch(const ReduceConstraint& c, NotNull<const Cons
 
         if (body->functionType)
         {
-            FunctionType* fnTy = getMutable<FunctionType>(body->functionType);
+            FunctionType* fnTy = getMutable<FunctionType>(follow(*body->functionType));
+
+            // TODO: Could this lead to an infinite loop?
+            if (isBlocked(follow(fnTy->retTypes)) || get<FreeTypePack>(follow(fnTy->retTypes)))
+            {
+                block(fnTy->retTypes, constraint);
+                return false;
+            }
 
             for (TypeId stuck : result.irreducibleTypes)
             {
                 const TypeFunctionInstanceType& stuckFn = *get<TypeFunctionInstanceType>(stuck);
-                bool alreadyHaveIt = false;
+                EquivalentTypeFunctionFinder etff(&stuckFn);
+                etff.traverse(*body->functionType);
 
-                for (TypeId previous : fnTy->inhabitanceConstraints)
-                {
-                    const TypeFunctionInstanceType& previousFn = *get<TypeFunctionInstanceType>(previous);
-                    if (areEquivalent(stuckFn, previousFn))
-                    {
-                        alreadyHaveIt = true;
-                        break;
-                    }
-                }
-
-                if (!alreadyHaveIt)
+                if (!etff.found)
                     fnTy->inhabitanceConstraints.push_back(stuck);
             }
         }

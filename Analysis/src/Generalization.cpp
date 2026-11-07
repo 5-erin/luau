@@ -1291,14 +1291,18 @@ GeneralizationResult<TypeId> generalizeType(
         switch (params.polarity)
         {
         case Polarity::Positive:
-            emplaceType<BoundType>(asMutable(freeTy), follow(ft->lowerBound));
+            // TODO VERY STRANGE
+            if (!get<UnknownType>(follow(ft->upperBound)) && get<NeverType>(follow(ft->lowerBound)))
+                emplaceType<BoundType>(asMutable(freeTy), follow(ft->upperBound));
+            else
+                emplaceType<BoundType>(asMutable(freeTy), follow(ft->lowerBound));
             break;
 
         case Polarity::Negative:
             // TODO: This is indicative of weird things going on, only the `else` branch makes sense.
             if (get<UnknownType>(follow(ft->upperBound)))
             {
-                emplaceType<GenericType>(asMutable(freeTy), scope, ft->upperBound, params.polarity);
+                emplaceType<GenericType>(asMutable(freeTy), scope, follow(ft->upperBound), params.polarity);
                 return {freeTy, /* wasReplacedByGeneric */ true};
             }
             else
@@ -1307,7 +1311,7 @@ GeneralizationResult<TypeId> generalizeType(
             break;
 
         case Polarity::Mixed:
-            emplaceType<GenericType>(asMutable(freeTy), scope, ft->upperBound, params.polarity);
+            emplaceType<GenericType>(asMutable(freeTy), scope, follow(ft->upperBound), params.polarity);
             return {freeTy, /* wasReplacedByGeneric */ true};
 
         default:
