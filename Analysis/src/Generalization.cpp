@@ -1302,21 +1302,18 @@ GeneralizationResult<TypeId> generalizeType(
         switch (params.polarity)
         {
         case Polarity::Positive:
-            // TODO VERY STRANGE
-            if (!get<UnknownType>(upperBound) && get<NeverType>(lowerBound))
-                emplaceType<BoundType>(asMutable(freeTy), upperBound);
-            else
-                emplaceType<BoundType>(asMutable(freeTy), lowerBound);
+            emplaceType<BoundType>(asMutable(freeTy), lowerBound);
             break;
 
         case Polarity::Negative:
             // TODO: This is indicative of weird things going on, only the `else` branch makes sense.
-            //if (get<UnknownType>(upperBound))
-            //{
-            //    emplaceType<GenericType>(asMutable(freeTy), scope, upperBound, params.polarity);
-            //    return {freeTy, /* wasReplacedByGeneric */ true};
-            //}
-            //else
+            // See the test: proper_let_generalization
+            if (get<UnknownType>(upperBound))
+            {
+                emplaceType<GenericType>(asMutable(freeTy), scope, upperBound, params.polarity);
+                return {freeTy, /* wasReplacedByGeneric */ true};
+            }
+            else
                 emplaceType<BoundType>(asMutable(freeTy), upperBound);
 
             break;
