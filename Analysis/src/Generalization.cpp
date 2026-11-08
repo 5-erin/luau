@@ -1101,6 +1101,12 @@ struct FindTypesWithPolarity
         }
         else if (auto funTy = get<FunctionType>(ty))
         {
+            if (FFlag::LuauGenericConstraintsSupport)
+            {
+                for (TypeId constraint : funTy->inhabitanceConstraints)
+                    push(constraint, Polarity::Mixed, true);
+            }
+
             push(funTy->argTypes, invert(polarity), true);
             push(funTy->retTypes, polarity, true);
         }
@@ -1302,7 +1308,11 @@ GeneralizationResult<TypeId> generalizeType(
         switch (params.polarity)
         {
         case Polarity::Positive:
-            emplaceType<BoundType>(asMutable(freeTy), lowerBound);
+            // TODO: searching_for_free_types_does_not_use_the_native_stack
+            //if (get<NeverType>(lowerBound))
+            //    emplaceType<BoundType>(asMutable(freeTy), upperBound);
+            //else
+                emplaceType<BoundType>(asMutable(freeTy), lowerBound);
             break;
 
         case Polarity::Negative:
@@ -1315,7 +1325,6 @@ GeneralizationResult<TypeId> generalizeType(
             }
             else
                 emplaceType<BoundType>(asMutable(freeTy), upperBound);
-
             break;
 
         case Polarity::Mixed:

@@ -2591,6 +2591,14 @@ void TypeChecker2::visit(AstExprIndexExpr* indexExpr, ValueContext context)
     TypeId exprType = follow(lookupType(indexExpr->expr));
     TypeId indexType = follow(lookupType(indexExpr->index));
 
+    if (const GenericType* gtv = get<GenericType>(exprType); FFlag::LuauGenericConstraintsSupport && gtv && gtv->upperBound)
+    {
+        TypeId upperBound = follow(*gtv->upperBound);
+
+        if (!get<UnknownType>(upperBound))
+            exprType = upperBound;
+    }
+
     if (auto tt = get<TableType>(exprType))
     {
         if (tt->indexer)
@@ -4465,6 +4473,14 @@ void TypeChecker2::checkIndexTypeFromType(
     TypeId astIndexExprType
 )
 {
+    if (const GenericType* gtv = get<GenericType>(tableTy); FFlag::LuauGenericConstraintsSupport && gtv && gtv->upperBound)
+    {
+        TypeId upperBound = follow(*gtv->upperBound);
+
+        if (!get<UnknownType>(upperBound))
+            tableTy = upperBound;
+    }
+
     std::shared_ptr<const NormalizedType> norm = normalizer.normalize(tableTy);
     if (!norm)
     {

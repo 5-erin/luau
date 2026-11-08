@@ -33,6 +33,7 @@ LUAU_FASTFLAG(LuauDecomposeIntersectionOfFreeType)
 LUAU_FASTFLAG(LuauRefactorStringSemanticSubtyping)
 LUAU_FASTFLAG(LuauEqualityConstraintBinds)
 LUAU_FASTFLAG(LuauNonreentrantLookupTableProp)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 namespace
 {
@@ -7783,6 +7784,7 @@ TEST_CASE_FIXTURE(Fixture, "inferred_table_arguments_are_inexact")
 TEST_CASE_FIXTURE(Fixture, "a_table_remains_inexact_if_it_is_both_an_argument_and_a_return")
 {
     ExactTableFlags exactTableFlags;
+    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
     DOES_NOT_PASS_OLD_SOLVER_GUARD();
 
     CheckResult result = check(R"(
@@ -7794,7 +7796,7 @@ TEST_CASE_FIXTURE(Fixture, "a_table_remains_inexact_if_it_is_both_an_argument_an
 
     LUAU_REQUIRE_NO_ERRORS(result);
 
-    CHECK("({ x: number, ... }) -> { x: number, ... }" == toString(requireType("f")));
+    CHECK("<T: { x: number, ... }>(T) -> T" == toString(requireType("f")));
 }
 
 TEST_CASE_FIXTURE(Fixture, "inferred_table_return_types_are_exact")

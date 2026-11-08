@@ -723,16 +723,25 @@ struct TypeStringifier
                     state.emit(", ");
                 comma = true;
 
-                const GenericType* gtv = get<GenericType>(*it);
-                LUAU_ASSERT(gtv);
-
-                emitGenericName(*it, *gtv);
-
-                if (FFlag::LuauGenericConstraintsSupport && gtv->upperBound && !get<UnknownType>(follow(*gtv->upperBound)))
+                if (FFlag::LuauGenericConstraintsSupport)
                 {
-                    state.emit(": ");
-                    stringify(*gtv->upperBound);
+                    const GenericType* gtv = get<GenericType>(follow(*it));
+
+                    if (gtv)
+                    {
+                        emitGenericName(*it, *gtv);
+
+                        if (gtv->upperBound && !get<UnknownType>(follow(*gtv->upperBound)))
+                        {
+                            state.emit(": ");
+                            stringify(*gtv->upperBound);
+                        }
+                    }
+                    else
+                        stringify(*it);
                 }
+                else
+                    stringify(*it);
             }
             for (auto it = ftv.genericPacks.begin(); it != ftv.genericPacks.end(); ++it)
             {

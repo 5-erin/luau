@@ -28,6 +28,7 @@ LUAU_FASTINT(LuauTypeInferRecursionLimit)
 LUAU_FASTFLAG(DebugLuauMagicTypes)
 LUAU_FASTFLAG(DebugLuauForbidInternalTypes)
 LUAU_FASTFLAG(LuauImproveUniqueTableWidthSubtyping)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 using namespace Luau;
 
@@ -1900,6 +1901,8 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "getmetatable_infer_any_ret")
 
 TEST_CASE_FIXTURE(BuiltinsFixture, "getmetatable_infer_any_param")
 {
+    ScopedFastFlag LuauGenericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
+
     auto result = check(R"(
         local function check(x): any
             return getmetatable(x)
@@ -1907,7 +1910,7 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "getmetatable_infer_any_param")
     )");
 
     if (!FFlag::DebugLuauForceOldSolver)
-        CHECK_EQ("(unknown) -> any", toString(requireType("check")));
+        CHECK_EQ("<T with getmetatable<T>>(T) -> any", toString(requireType("check")));
     else
         CHECK_EQ("(setmetatable<{+  +}, any>) -> any", toString(requireType("check")));
 }

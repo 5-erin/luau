@@ -2213,6 +2213,15 @@ bool ConstraintSolver::tryDispatch(const HasIndexerConstraint& c, NotNull<const 
 bool ConstraintSolver::tryDispatch(const AssignPropConstraint& c, NotNull<const Constraint> constraint)
 {
     TypeId lhsType = follow(c.lhsType);
+
+    if (const GenericType* gtv = get<GenericType>(lhsType); FFlag::LuauGenericConstraintsSupport && gtv && gtv->upperBound)
+    {
+        TypeId upperBound = follow(*gtv->upperBound);
+
+        if (!get<UnknownType>(upperBound))
+            lhsType = upperBound;
+    }
+
     const std::string& propName = c.propName;
     const TypeId rhsType = follow(c.rhsType);
 
@@ -2667,7 +2676,7 @@ bool ConstraintSolver::tryDispatch(const ReduceConstraint& c, NotNull<const Cons
         {
             FunctionType* fnTy = getMutable<FunctionType>(follow(*body->functionType));
 
-            // TODO: Could this lead to an infinite loop?
+            // TODO: Could this lead to a constraint cycle - return blocked on `ReduceConstraint` blocked on return?
             if (isBlocked(follow(fnTy->retTypes)) || get<FreeTypePack>(follow(fnTy->retTypes)))
             {
                 block(fnTy->retTypes, constraint);
@@ -2676,8 +2685,10 @@ bool ConstraintSolver::tryDispatch(const ReduceConstraint& c, NotNull<const Cons
 
             for (TypeId stuck : result.irreducibleTypes)
             {
-                const TypeFunctionInstanceType& stuckFn = *get<TypeFunctionInstanceType>(stuck);
-                EquivalentTypeFunctionFinder etff(&stuckFn);
+                const TypeFunctionInstanceType* stuckFn = get<TypeFunctionInstanceType>(stuck);
+                LUAU_ASSERT(stuckFn);
+
+                EquivalentTypeFunctionFinder etff(stuckFn);
                 etff.traverse(*body->functionType);
 
                 if (!etff.found)
