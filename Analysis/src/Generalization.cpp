@@ -1338,7 +1338,15 @@ GeneralizationResult<TypeId> generalizeType(
         removeType(arena, builtinTypes, ub, freeTy);
 
         if (follow(ub) != freeTy)
-            emplaceType<BoundType>(asMutable(freeTy), ub);
+        {
+            if (FFlag::LuauGenericConstraintsSupport && isWithinFunction)
+            {
+                emplaceType<GenericType>(asMutable(freeTy), scope, ub, params.polarity);
+                return {freeTy, /*wasReplacedByGeneric*/ true};
+            }
+            else
+                emplaceType<BoundType>(asMutable(freeTy), ub);
+        }
         else if (!isWithinFunction || params.useCount == 1)
         {
             // If we have some free type:
@@ -1999,7 +2007,10 @@ void pruneUnnecessaryGenerics(
                 {
                     if (arena.get() != generic->owningArena)
                         continue;
-                    emplaceType<BoundType>(asMutable(generic), builtinTypes->unknownType);
+                    if (const GenericType* gtv = get<GenericType>(generic); FFlag::LuauGenericConstraintsSupport && gtv)
+                        emplaceType<BoundType>(asMutable(generic), gtv->upperBound ? *gtv->upperBound : builtinTypes->unknownType);
+                    else
+                        emplaceType<BoundType>(asMutable(generic), builtinTypes->unknownType);
                 }
             }
         }
