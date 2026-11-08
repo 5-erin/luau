@@ -1292,62 +1292,6 @@ GeneralizationResult<TypeId> generalizeType(
     LUAU_ASSERT(ft);
     LUAU_ASSERT(isKnown(params.polarity));
 
-    if (FFlag::LuauGenericConstraintsSupport)
-    {
-        removeType(arena, builtinTypes, follow(ft->upperBound), freeTy);
-        removeType(arena, builtinTypes, follow(ft->lowerBound), freeTy);
-
-        TypeId upperBound = follow(ft->upperBound);
-        TypeId lowerBound = follow(ft->lowerBound);
-
-        if (upperBound == freeTy)
-            upperBound = builtinTypes->unknownType;
-        if (lowerBound == freeTy)
-            lowerBound = builtinTypes->neverType;
-
-        switch (params.polarity)
-        {
-        case Polarity::Positive:
-            // TODO: searching_for_free_types_does_not_use_the_native_stack
-            //if (get<NeverType>(lowerBound))
-            //    emplaceType<BoundType>(asMutable(freeTy), upperBound);
-            //else
-                emplaceType<BoundType>(asMutable(freeTy), lowerBound);
-            break;
-
-        case Polarity::Negative:
-            // TODO: This is indicative of weird things going on, only the `else` branch makes sense.
-            // See the test: proper_let_generalization
-            if (get<UnknownType>(upperBound))
-            {
-                emplaceType<GenericType>(asMutable(freeTy), scope, upperBound, params.polarity);
-                return {freeTy, /* wasReplacedByGeneric */ true};
-            }
-            else
-                emplaceType<BoundType>(asMutable(freeTy), upperBound);
-            break;
-
-        case Polarity::Mixed:
-            if (!params.foundOutsideFunctions)
-            {
-                // Mixed + Inside Function = Generic
-                emplaceType<GenericType>(asMutable(freeTy), scope, upperBound, params.polarity);
-                return {freeTy, /* wasReplacedByGeneric */ true};
-            }
-            else
-            {
-                emplaceType<BoundType>(asMutable(freeTy), upperBound);
-            }
-
-            break;
-
-        default:
-            break;
-        }
-
-        return {freeTy, /* wasReplacedByGeneric */ false};
-    }
-
     const bool hasLowerBound = !get<NeverType>(follow(ft->lowerBound));
     const bool hasUpperBound = !get<UnknownType>(follow(ft->upperBound));
 
