@@ -1290,6 +1290,7 @@ GeneralizationResult<TypeId> generalizeType(
 
     FreeType* ft = getMutable<FreeType>(freeTy);
     LUAU_ASSERT(ft);
+
     LUAU_ASSERT(isKnown(params.polarity));
 
     const bool hasLowerBound = !get<NeverType>(follow(ft->lowerBound));
@@ -1339,7 +1340,7 @@ GeneralizationResult<TypeId> generalizeType(
 
         if (follow(ub) != freeTy)
         {
-            if (FFlag::LuauGenericConstraintsSupport && isWithinFunction)
+            if (FFlag::LuauGenericConstraintsSupport && params.polarity == Polarity::Mixed && isWithinFunction)
             {
                 emplaceType<GenericType>(asMutable(freeTy), scope, ub, params.polarity);
                 return {freeTy, /*wasReplacedByGeneric*/ true};
@@ -1881,11 +1882,32 @@ void pruneUnnecessaryGenerics(
                 break;
 
             case Polarity::Mixed:
-                genericTy->polarity = Polarity::Mixed;
-                seenTypes.insert(generic);
-                it++;
-                break;
+            {
+                TypeId ub = genericTy->upperBound ? follow(*genericTy->upperBound) : nullptr;
 
+                // Some types do not have inhabited strict subtypes, any generics with them as upper bounds are redundant.
+                if (FFlag::LuauGenericConstraintsSupport && ub
+                    && (ub == builtinTypes->nilType
+                    || ub == builtinTypes->numberType
+                    || ub == builtinTypes->integerType
+                    || ub == builtinTypes->threadType
+                    || ub == builtinTypes->bufferType
+                    || ub == builtinTypes->trueType
+                    || ub == builtinTypes->falseType
+                    || ub == builtinTypes->neverType)
+                )
+                {
+                    emplaceType<BoundType>(asMutable(generic), ub);
+                }
+                else
+                {
+                    genericTy->polarity = Polarity::Mixed;
+                    seenTypes.insert(generic);
+                    it++;
+                }
+
+                break;
+            }
             case Polarity::None:
             case Polarity::Unknown:
                 // If we have an entry in `ftwp.types`, then we should have

@@ -16,6 +16,7 @@ LUAU_FASTFLAG(DebugLuauForceOldSolver)
 LUAU_FASTFLAG(LuauIntegerType2)
 LUAU_FASTFLAG(LuauSolverAgnosticStringification)
 LUAU_FASTFLAG(LuauCompoundAssignSeedsAstTypes)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 TEST_SUITE_BEGIN("TypeInferOperators");
 
@@ -849,6 +850,8 @@ TEST_CASE_FIXTURE(Fixture, "concat_op_on_string_lhs_and_free_rhs")
 
 TEST_CASE_FIXTURE(Fixture, "strict_binary_op_where_lhs_unknown")
 {
+    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
+
     std::vector<std::string> ops = {"+", "-", "*", "/", "%", "^", ".."};
 
     std::string src = "function foo(a, b)\n";
@@ -862,15 +865,7 @@ TEST_CASE_FIXTURE(Fixture, "strict_binary_op_where_lhs_unknown")
 
     if (!FFlag::DebugLuauForceOldSolver)
     {
-        LUAU_REQUIRE_ERROR_COUNT(ops.size(), result);
-        CHECK_EQ(
-            "Operator '+' could not be applied to operands of types unknown and unknown; there is no corresponding overload for __add",
-            toString(result.errors[0])
-        );
-        CHECK_EQ(
-            "Operator '-' could not be applied to operands of types unknown and unknown; there is no corresponding overload for __sub",
-            toString(result.errors[1])
-        );
+        LUAU_REQUIRE_NO_ERRORS(result);
     }
     else
     {

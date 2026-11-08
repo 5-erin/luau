@@ -278,10 +278,11 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "mul_function_with_union_of_multiplicatives_2
     CHECK(toString(requireTypeAlias("T")) == "Vec3");
 }
 
-TEST_CASE_FIXTURE(Fixture, "internal_functions_raise_errors")
+TEST_CASE_FIXTURE(Fixture, "internal_functions_are_inhabitance_constraints")
 {
     if (FFlag::DebugLuauForceOldSolver)
         return;
+    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
 
     CheckResult result = check(R"(
         local function innerSum(a, b)
@@ -289,11 +290,7 @@ TEST_CASE_FIXTURE(Fixture, "internal_functions_raise_errors")
         end
     )");
 
-    LUAU_REQUIRE_ERROR_COUNT(1, result);
-    CHECK(
-        toString(result.errors[0]) ==
-        "Operator '+' could not be applied to operands of types unknown and unknown; there is no corresponding overload for __add"
-    );
+    LUAU_REQUIRE_NO_ERRORS(result);
 }
 
 TEST_CASE_FIXTURE(BuiltinsFixture, "type_functions_can_be_shadowed")

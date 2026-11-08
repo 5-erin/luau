@@ -1316,8 +1316,6 @@ TEST_CASE_FIXTURE(Fixture, "correctly_instantiate_polymorphic_member_functions")
  */
 TEST_CASE_FIXTURE(Fixture, "instantiate_cyclic_generic_function")
 {
-    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
-
     auto result = check(R"(
         function f(o)
             o:method()
@@ -1343,10 +1341,7 @@ TEST_CASE_FIXTURE(Fixture, "instantiate_cyclic_generic_function")
     REQUIRE(bool(methodProp));
 
     REQUIRE(methodProp->readTy);
-    const GenericType* methodGeneric = get<GenericType>(follow(*methodProp->readTy));
-    REQUIRE(methodGeneric);
-
-    const FunctionType* methodFunction = methodGeneric->upperBound ? get<FunctionType>(follow(*methodGeneric->upperBound)) : nullptr;
+    const FunctionType* methodFunction = get<FunctionType>(follow(*methodProp->readTy));
     REQUIRE(methodFunction != nullptr);
 
     std::optional<TypeId> methodArg = first(methodFunction->argTypes);
@@ -1525,8 +1520,6 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "infer_generic_function_function_argument_3")
 
 TEST_CASE_FIXTURE(Fixture, "infer_generic_function_function_argument_overloaded_pt_1")
 {
-    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
-
     CheckResult result = check(R"(
         local g12: (<T>(T, (T) -> T) -> T) & (<T>(T, T, (T, T) -> T) -> T)
 
@@ -1536,8 +1529,8 @@ TEST_CASE_FIXTURE(Fixture, "infer_generic_function_function_argument_overloaded_
 
     if (!FFlag::DebugLuauForceOldSolver)
     {
-        LUAU_REQUIRE_ERROR_COUNT(2, result);
-        CHECK_EQ("add<unknown, unknown> | number", toString(requireType("a")));
+        LUAU_REQUIRE_ERROR_COUNT(1, result);
+        CHECK_EQ("number | number", toString(requireType("a")));
         // Prior this contained a leaked generic, so we'd report no type errors.
         CHECK_EQ("add<unknown, unknown> | number", toString(requireType("b")));
     }
@@ -1816,8 +1809,6 @@ instantiate(function(x: string) return "foo" end)
 
 TEST_CASE_FIXTURE(Fixture, "bidirectional_checking_and_generalization_play_nice")
 {
-    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
-
     CheckResult result = check(R"(
         local foo = function(a)
             return a()
@@ -1830,7 +1821,7 @@ TEST_CASE_FIXTURE(Fixture, "bidirectional_checking_and_generalization_play_nice"
     LUAU_REQUIRE_NO_ERRORS(result);
 
     CHECK("number" == toString(requireType("a")));
-    CHECK("\"bar\"" == toString(requireType("b")));
+    CHECK("string" == toString(requireType("b")));
 }
 
 TEST_CASE_FIXTURE(BuiltinsFixture, "generalization_no_cyclic_intersections")

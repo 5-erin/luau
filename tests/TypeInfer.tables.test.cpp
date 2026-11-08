@@ -2825,6 +2825,8 @@ TEST_CASE_FIXTURE(Fixture, "confusing_indexing")
 
 TEST_CASE_FIXTURE(Fixture, "pass_a_union_of_tables_to_a_function_that_requires_a_table")
 {
+    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
+
     CheckResult result = check(R"(
         local a: {x: number, y: number, [any]: any} | {y: number}
 
@@ -2841,13 +2843,15 @@ TEST_CASE_FIXTURE(Fixture, "pass_a_union_of_tables_to_a_function_that_requires_a
     if (!FFlag::DebugLuauForceOldSolver && FFlag::DebugLuauExactTableTypes)
         CHECK("{ y: number, ... }" == toString(requireType("b")));
     else if (!FFlag::DebugLuauForceOldSolver)
-        REQUIRE_EQ("{ y: number }", toString(requireType("b")));
+        REQUIRE_EQ("{ [any]: any, x: number, y: number } | { y: number }", toString(requireType("b")));
     else
         REQUIRE_EQ("{- y: number -}", toString(requireType("b")));
 }
 
 TEST_CASE_FIXTURE(Fixture, "pass_a_union_of_tables_to_a_function_that_requires_a_table_2")
 {
+    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
+
     CheckResult result = check(R"(
         local a: {y: number} | {x: number, y: number, [any]: any}
 
@@ -2864,7 +2868,7 @@ TEST_CASE_FIXTURE(Fixture, "pass_a_union_of_tables_to_a_function_that_requires_a
     if (!FFlag::DebugLuauForceOldSolver && FFlag::DebugLuauExactTableTypes)
         CHECK("{ y: number, ... }" == toString(requireType("b")));
     else if (!FFlag::DebugLuauForceOldSolver)
-        REQUIRE_EQ("{ y: number }", toString(requireType("b")));
+        REQUIRE_EQ("{y: number} | {x: number, y: number, [any]: any}", toString(requireType("b")));
     else
         REQUIRE_EQ("{- y: number -}", toString(requireType("b")));
 }
@@ -3924,6 +3928,8 @@ TEST_CASE_FIXTURE(Fixture, "invariant_table_properties_means_instantiating_table
 TEST_CASE_FIXTURE(BuiltinsFixture, "generic_table_instantiation_potential_regression")
 {
     ExactTableFlags exactTableFlags;
+    ScopedFastFlag genericConstraintsSupport{FFlag::LuauGenericConstraintsSupport, true};
+
     CheckResult result = check(R"(
 --!strict
 
@@ -3942,7 +3948,7 @@ local g : ({ p : number, q : string }) -> ({ p : number, r : boolean }) = f
         REQUIRE_MESSAGE(error, "Expected TypeMismatch but got " << result.errors[0]);
 
         CHECK("({ p: number, q: string }) -> { p: number, r: boolean }" == toString(error->wantedType));
-        CHECK("({ p: number, ... }) -> { p: number, ... }" == toString(error->givenType));
+        CHECK("<T: { p: number, ... }>(T) -> T" == toString(error->givenType));
     }
     else
     {
@@ -7589,6 +7595,7 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "test_inferring_generalized_iteration_1")
         {FFlag::DebugLuauAssertOnForcedConstraint, true},
         {FFlag::LuauDecomposeIntersectionOfFreeType, true},
         {FFlag::LuauRefactorStringSemanticSubtyping, true},
+        {FFlag::LuauGenericConstraintsSupport, true},
     };
 
     CheckResult result = check(R"(
@@ -7604,7 +7611,7 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "test_inferring_generalized_iteration_1")
 
     LUAU_REQUIRE_NO_ERRORS(result);
 
-    CHECK_EQ("({ read RootToDescendantCountMap: { [string?]: number, ... }, ... }) -> ()", toString(requireType("setupRootMappingMove")));
+    CHECK_EQ("<T: string?>({ read RootToDescendantCountMap: { [T]: number, ... }, ... }) -> ()", toString(requireType("setupRootMappingMove")));
 }
 
 TEST_CASE_FIXTURE(BuiltinsFixture, "test_inferring_generalized_iteration_2")

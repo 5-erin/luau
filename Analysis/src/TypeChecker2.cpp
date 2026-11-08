@@ -1048,6 +1048,9 @@ void TypeChecker2::visit(AstStatForIn* forInStatement)
     }
     TypeId iteratorTy = follow(iteratorTypes.head[0]);
 
+    if (const GenericType* gtv = get<GenericType>(iteratorTy); FFlag::LuauGenericConstraintsSupport && gtv && gtv->upperBound)
+        iteratorTy = follow(*gtv->upperBound);
+
     auto checkFunction = [this, &arena, &forInStatement, &variableTypes](const FunctionType* iterFtv, std::vector<TypeId> iterTys, bool isMm)
     {
         if (iterTys.size() < 1 || iterTys.size() > 3)
@@ -2080,6 +2083,7 @@ void TypeChecker2::visitCall(AstExprCall* call)
 
     TypeId fnTy = follow(*originalCallTy);
 
+
     if (get<AnyType>(fnTy) || get<ErrorType>(fnTy) || get<NeverType>(fnTy))
         return;
     else if (isOptional(fnTy))
@@ -2264,7 +2268,7 @@ void TypeChecker2::visitCall(AstExprCall* call)
 
         const FunctionType* ftv = get<FunctionType>(follow(*originalCallTy));
 
-        if (ftv && !ftv->inhabitanceConstraints.empty())
+        if (FFlag::LuauGenericConstraintsSupport && ftv && !ftv->inhabitanceConstraints.empty())
         {
             std::shared_ptr<TypeArena> arena = module->internalTypes;
 
