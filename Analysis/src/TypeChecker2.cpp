@@ -4434,6 +4434,20 @@ PropertyTypes TypeChecker2::lookupProp(
         }
     }
 
+    if (FFlag::LuauGenericConstraintsSupport && normValid)
+    {
+        for (const auto& [ ty, _ ] : norm->tyvars)
+        {
+            if (const GenericType* gtv = get<GenericType>(ty); gtv && gtv->upperBound)
+            {
+                fetch(follow(*gtv->upperBound));
+
+                if (!normValid)
+                    break;
+            }
+        }
+    }
+
     if (normValid && norm->functions.isTop)
         fetch(builtinTypes->functionType);
     else if (normValid && !norm->functions.isNever())
@@ -4477,14 +4491,6 @@ void TypeChecker2::checkIndexTypeFromType(
     TypeId astIndexExprType
 )
 {
-    if (const GenericType* gtv = get<GenericType>(tableTy); FFlag::LuauGenericConstraintsSupport && gtv && gtv->upperBound)
-    {
-        TypeId upperBound = follow(*gtv->upperBound);
-
-        if (!get<UnknownType>(upperBound))
-            tableTy = upperBound;
-    }
-
     std::shared_ptr<const NormalizedType> norm = normalizer.normalize(tableTy);
     if (!norm)
     {

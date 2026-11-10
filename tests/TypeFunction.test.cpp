@@ -291,6 +291,7 @@ TEST_CASE_FIXTURE(Fixture, "internal_functions_are_inhabitance_constraints")
     )");
 
     LUAU_REQUIRE_NO_ERRORS(result);
+    CHECK_EQ("<T, U with add<T, U>>(T, U) -> ()", toString(requireType("innerSum")));
 }
 
 TEST_CASE_FIXTURE(BuiltinsFixture, "type_functions_can_be_shadowed")

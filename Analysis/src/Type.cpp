@@ -29,6 +29,7 @@ LUAU_FASTINTVARIABLE(LuauTypeMaximumStringifierLength, 500)
 LUAU_FASTINTVARIABLE(LuauTableTypeMaximumStringifierLength, 0)
 LUAU_FASTINT(LuauTypeInferRecursionLimit)
 LUAU_FASTFLAG(LuauInstantiateInSubtyping)
+LUAU_FASTFLAG(LuauGenericConstraintsSupport)
 
 namespace Luau
 {
@@ -290,6 +291,8 @@ std::optional<TypeId> getMetatable(TypeId type, NotNull<BuiltinTypes> builtinTyp
         return mtType->metatable;
     else if (const ExternType* externType = get<ExternType>(type))
         return externType->metatable;
+    else if (const GenericType* genType = get<GenericType>(type); FFlag::LuauGenericConstraintsSupport && genType && genType->upperBound)
+        return getMetatable(*genType->upperBound, builtinTypes);
     else if (isString(type))
     {
         auto ptv = get<PrimitiveType>(builtinTypes->stringType);
@@ -308,6 +311,8 @@ const TableType* getTableType(TypeId type)
         return ttv;
     else if (const MetatableType* mtv = get<MetatableType>(type))
         return get<TableType>(follow(mtv->table));
+    else if (const GenericType* gtv = get<GenericType>(type); FFlag::LuauGenericConstraintsSupport && gtv && gtv->upperBound)
+        return getTableType(*gtv->upperBound);
     else
         return nullptr;
 }

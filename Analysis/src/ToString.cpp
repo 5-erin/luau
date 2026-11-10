@@ -127,6 +127,11 @@ struct FindCyclicTypes final : TypeVisitor
     {
         return false;
     }
+
+    bool visit(TypeId, const GenericType&) override
+    {
+        return !FFlag::LuauGenericConstraintsSupport;
+    }
 };
 
 template<typename TID>
