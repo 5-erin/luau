@@ -455,6 +455,9 @@ bool hasLength(TypeId ty, DenseHashSet<TypeId>& seen, int* recursionCount)
 
     ty = follow(ty);
 
+    if (const GenericType* gtv = get<GenericType>(ty); FFlag::LuauGenericConstraintsSupport && gtv && gtv->upperBound)
+        ty = follow(*gtv->upperBound);
+
     if (seen.contains(ty))
         return true;
 

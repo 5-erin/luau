@@ -191,7 +191,8 @@ struct TypeFunctionFinder : TypeOnceVisitor
     }
 };
 
-struct InternalTypeFunctionFinder : TypeOnceVisitor
+// Clip with LuauGenericConstraintsSupport
+struct InternalTypeFunctionFinder_DEPRECATED : TypeOnceVisitor
 {
     DenseHashSet<TypeId> internalFunctions;
     DenseHashSet<TypePackId> internalPackFunctions;
@@ -199,7 +200,7 @@ struct InternalTypeFunctionFinder : TypeOnceVisitor
     DenseHashSet<TypePackId> mentionedFunctionPacks;
     const std::vector<TypeId>* unscannedDeclStack = nullptr;
 
-    explicit InternalTypeFunctionFinder(std::vector<TypeId>& declStack)
+    explicit InternalTypeFunctionFinder_DEPRECATED(std::vector<TypeId>& declStack)
         : TypeOnceVisitor("InternalTypeFunctionFinder", /* skipBoundTypes */ true)
     {
         if (FFlag::LuauSkipUnusedTypeTraversals)
@@ -519,12 +520,11 @@ std::optional<StackPusher> TypeChecker2::pushStack(AstNode* node)
         return std::nullopt;
 }
 
-void TypeChecker2::checkForInternalTypeFunction(TypeId ty, Location location)
+void TypeChecker2::checkForInternalTypeFunction_DEPRECATED(TypeId ty, Location location)
 {
-    if (FFlag::LuauGenericConstraintsSupport)
-        return; // These will be inferred as part of the `with`/inhabitance constraint clause
+    LUAU_ASSERT(FFlag::LuauGenericConstraintsSupport);
 
-    InternalTypeFunctionFinder finder(functionDeclStack);
+    InternalTypeFunctionFinder_DEPRECATED finder(functionDeclStack);
     finder.traverse(ty);
 
     for (TypeId internal : finder.internalFunctions)
@@ -2972,7 +2972,8 @@ TypeId TypeChecker2::visit(AstExprBinary* expr, AstNode* overrideKey)
 
     if (get<TypeFunctionInstanceType>(expectedResult))
     {
-        checkForInternalTypeFunction(expectedResult, expr->location);
+        if (!FFlag::LuauGenericConstraintsSupport)
+            checkForInternalTypeFunction_DEPRECATED(expectedResult, expr->location);
         return expectedResult;
     }
 
@@ -4440,7 +4441,17 @@ PropertyTypes TypeChecker2::lookupProp(
         {
             if (const GenericType* gtv = get<GenericType>(ty); gtv && gtv->upperBound)
             {
-                fetch(follow(*gtv->upperBound));
+                TypeId ub = follow(*gtv->upperBound);
+                std::shared_ptr<const NormalizedType> ubNorm = normalizer.normalize(ub);
+
+                if (ubNorm)
+                {
+                    const auto innerPropTypes = lookupProp(ubNorm.get(), prop, context, location, astIndexExprType, errors);
+                    typesOfProp.insert(typesOfProp.end(), innerPropTypes.typesOfProp.begin(), innerPropTypes.typesOfProp.end());
+                    typesMissingTheProp.insert(typesMissingTheProp.end(), innerPropTypes.missingProp.begin(), innerPropTypes.missingProp.end());
+                }
+                else
+                    normValid = false;
 
                 if (!normValid)
                     break;
@@ -4481,7 +4492,6 @@ PropertyTypes TypeChecker2::lookupProp(
 
     return {std::move(typesOfProp), std::move(typesMissingTheProp)};
 }
-
 
 void TypeChecker2::checkIndexTypeFromType(
     TypeId tableTy,

@@ -2843,7 +2843,7 @@ TEST_CASE_FIXTURE(Fixture, "pass_a_union_of_tables_to_a_function_that_requires_a
     if (!FFlag::DebugLuauForceOldSolver && FFlag::DebugLuauExactTableTypes)
         CHECK("{ y: number, ... }" == toString(requireType("b")));
     else if (!FFlag::DebugLuauForceOldSolver)
-        REQUIRE_EQ("{ [any]: any, x: number, y: number } | { y: number }", toString(requireType("b")));
+        REQUIRE_EQ("{ y: number } | { [any]: any, x: number, y: number }", toString(requireType("b")));
     else
         REQUIRE_EQ("{- y: number -}", toString(requireType("b")));
 }
@@ -7388,7 +7388,7 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "indexer_and_subsequent_constraint")
     )");
     LUAU_REQUIRE_NO_ERRORS(result);
 
-    CHECK_EQ("({ [string]: number, ... }, string) -> number", toString(requireType("getnumberandabs")));
+    CHECK_EQ("<T: number>({ [string]: T, ... }, string) -> number", toString(requireType("getnumberandabs")));
 }
 
 TEST_CASE_FIXTURE(BuiltinsFixture, "intersection_of_indexers_1")
@@ -7611,7 +7611,7 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "test_inferring_generalized_iteration_1")
 
     LUAU_REQUIRE_NO_ERRORS(result);
 
-    CHECK_EQ("<T: string?>({ read RootToDescendantCountMap: { [T]: number, ... }, ... }) -> ()", toString(requireType("setupRootMappingMove")));
+    CHECK_EQ("<T: string?, U: number>({ read RootToDescendantCountMap: { [T]: U, ... }, ... }) -> ()", toString(requireType("setupRootMappingMove")));
 }
 
 TEST_CASE_FIXTURE(BuiltinsFixture, "test_inferring_generalized_iteration_2")

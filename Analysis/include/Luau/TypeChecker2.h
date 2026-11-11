@@ -121,7 +121,8 @@ private:
     bool hasBreak(AstStat* node);
     const AstStat* getFallthrough(const AstStat* node);
     std::optional<StackPusher> pushStack(AstNode* node);
-    void checkForInternalTypeFunction(TypeId ty, Location location);
+    // Clip with LuauGenericConstraintsSupport
+    void checkForInternalTypeFunction_DEPRECATED(TypeId ty, Location location);
     TypeId checkForTypeFunctionInhabitance(TypeId instance, Location location);
     TypePackId lookupPack(AstExpr* expr) const;
     std::optional<TypeId> tryLookupType(AstExpr* expr);

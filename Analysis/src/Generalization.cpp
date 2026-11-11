@@ -722,6 +722,11 @@ struct TypeRemover
                     emplaceType<BoundType>(asMutable(item), arena->addType(IntersectionType{newParts.take()}));
             }
         }
+        else if (auto ft = get<FreeType>(item); FFlag::LuauGenericConstraintsSupport && ft)
+        {
+            process(ft->lowerBound);
+            process(ft->upperBound);
+        }
     }
 };
 
@@ -1338,7 +1343,7 @@ GeneralizationResult<TypeId> generalizeType(
         // strip the free type from the upper bound.
         removeType(arena, builtinTypes, ub, freeTy);
 
-        if (follow(ub) != freeTy)
+        if ((ub = follow(ub)) != freeTy)
         {
             if (FFlag::LuauGenericConstraintsSupport && params.polarity == Polarity::Mixed && isWithinFunction)
             {
@@ -1883,29 +1888,9 @@ void pruneUnnecessaryGenerics(
 
             case Polarity::Mixed:
             {
-                TypeId ub = genericTy->upperBound ? follow(*genericTy->upperBound) : nullptr;
-
-                // Some types do not have inhabited strict subtypes, any generics with them as upper bounds are redundant.
-                if (FFlag::LuauGenericConstraintsSupport && ub
-                    && (ub == builtinTypes->nilType
-                    || ub == builtinTypes->numberType
-                    || ub == builtinTypes->integerType
-                    || ub == builtinTypes->threadType
-                    || ub == builtinTypes->bufferType
-                    || ub == builtinTypes->trueType
-                    || ub == builtinTypes->falseType
-                    || ub == builtinTypes->neverType)
-                )
-                {
-                    emplaceType<BoundType>(asMutable(generic), ub);
-                }
-                else
-                {
-                    genericTy->polarity = Polarity::Mixed;
-                    seenTypes.insert(generic);
-                    it++;
-                }
-
+                genericTy->polarity = Polarity::Mixed;
+                seenTypes.insert(generic);
+                it++;
                 break;
             }
             case Polarity::None:
